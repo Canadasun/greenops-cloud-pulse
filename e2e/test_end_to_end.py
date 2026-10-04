@@ -32,7 +32,10 @@ def http(method, url, body=None):
 def wait_for(check, timeout, every=2):
     end = time.time() + timeout
     while time.time() < end:
-        result = check()
+        try:
+            result = check()
+        except OSError:  # a service may still be starting (connection refused / reset)
+            result = None
         if result:
             return result
         time.sleep(every)
