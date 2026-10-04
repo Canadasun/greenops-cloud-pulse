@@ -1,0 +1,11 @@
+# Topic permissions (FR-04). %u is the device name taken from the certificate's CN.
+# A truck may only WRITE to its own device-to-cloud topic – it can never publish as another truck.
+pattern write devices/%u/messages/events/
+
+# The router (IoT Hub "message routing") reads every truck's topic.
+user router
+topic read devices/+/messages/events/
+
+# Read-only identity used by the automated end-to-end tests.
+user e2e-tester
+topic read devices/+/messages/events/
