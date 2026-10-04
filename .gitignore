@@ -1,0 +1,17 @@
+# secrets and generated certificates – never committed
+broker/certs/*
+!broker/certs/.gitkeep
+.env
+local.settings.json
+# build / runtime
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+dist/
+.pytest_cache/
+coverage/
+playwright-report/
+test-results/
+.azurite/
+*.log

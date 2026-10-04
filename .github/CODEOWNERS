@@ -1,0 +1,11 @@
+# Each folder is owned (reviewed) by the member who owns that role.
+# Replace the handles with each member's GitHub username once they are invited.
+/simulator/        @ying-song            # Role 1 – Edge & Telemetry Simulation
+/broker/           @marcelbriaud         # Role 2 – Cloud Ingestion & Message Broker
+/infra/            @marcelbriaud
+/functions/alerting/  @shi-wang          # Role 3 – Event Processing & Alerting
+/mail-relay/       @shi-wang
+/functions/shared/repository.py @durmusali-unal  # Role 4 – Cloud Storage & Cost Analysis
+/functions/fleet_api.py  @Canadasun       # Role 5 – Dashboard & User Deliverables (Idowu Ayeni)
+/dashboard/        @Canadasun
+/contracts/        @ying-song @Canadasun

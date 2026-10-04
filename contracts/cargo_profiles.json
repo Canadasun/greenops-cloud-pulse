@@ -1,0 +1,6 @@
+{
+  "_comment": "CARGO_PROFILE reference data (Part 2, Figure 6). Owner: Ying Song (Role 1) with Shi Wang (Role 3).",
+  "vaccines":      {"temp_min_c": 2,   "temp_max_c": 8,   "humidity_max_pct": 75},
+  "fresh_produce": {"temp_min_c": 1,   "temp_max_c": 6,   "humidity_max_pct": 95},
+  "frozen_food":   {"temp_min_c": -25, "temp_max_c": -15, "humidity_max_pct": 90}
+}
