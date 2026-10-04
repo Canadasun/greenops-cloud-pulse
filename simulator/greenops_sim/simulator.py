@@ -41,6 +41,12 @@ class TruckSimulator:
     def arrived(self) -> bool:
         return self.progress >= 1.0
 
+    def start_next_trip(self):
+        """Begin the same route again. The cargo keeps its temperature and any active fault."""
+        self.started = self._last = self.clock()
+        self.scheduled_eta = self.started + timedelta(seconds=self.journey_s)
+        self.progress = 0.0
+
     def inject_fault(self, scenario: str):
         if scenario not in SCENARIOS:
             raise ValueError(f"unknown scenario {scenario!r}; use one of {SCENARIOS}")

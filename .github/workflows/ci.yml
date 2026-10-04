@@ -1,0 +1,79 @@
+# Continuous integration: every push and pull request runs every test suite (NFR-06).
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  simulator:            # Role 1 – Ying Song
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: simulator } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -v
+
+  ingestion:            # Role 2 – Marcelbriaud Wafotchoupe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pytest paho-mqtt
+      - name: Router unit tests
+        run: cd broker/router && python -m pytest -v
+      - name: Broker security tests (live Mosquitto with mutual TLS)
+        run: |
+          bash scripts/make_certs.sh
+          docker run -d --name mosquitto -p 8883:8883 \
+            -v $PWD/broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro \
+            -v $PWD/broker/acl:/mosquitto/config/acl:ro -v $PWD/broker/certs:/mosquitto/certs:ro eclipse-mosquitto:2
+          sleep 3
+          python -m pytest -v broker/tests
+
+  functions:            # Role 3 – Shi Wang · Role 4 – Durmusali Unal · Role 5 – Idowu Ayeni
+    runs-on: ubuntu-latest
+    services:
+      cosmos:
+        image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+        ports: ["8081:8081"]
+        env: { PROTOCOL: http }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r functions/requirements-dev.txt
+      - name: Unit tests and storage contract against the Cosmos DB emulator
+        run: |
+          for i in $(seq 1 60); do curl -s -o /dev/null http://localhost:8081/ && break; sleep 3; done
+          cd functions && COSMOS_ENDPOINT=http://localhost:8081 python -m pytest -v
+      - name: Mail relay tests
+        run: cd mail-relay && python -m pytest -v
+
+  dashboard:            # Role 5 – Idowu Ayeni
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: dashboard } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "22", cache: npm, cache-dependency-path: dashboard/package-lock.json }
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  end-to-end:           # all roles – the whole system in Docker
+    needs: [simulator, ingestion, functions, dashboard]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r e2e/requirements.txt
+      - run: bash scripts/make_certs.sh
+      - run: docker compose -f docker-compose.yml -f e2e/compose.e2e.yml up -d --build
+      - run: python -m pytest -v e2e
+      - if: failure()
+        run: docker compose logs --tail 80

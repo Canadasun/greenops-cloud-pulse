@@ -39,6 +39,7 @@ issue() { # name, extra SAN
 issue mosquitto "DNS:mosquitto,DNS:localhost,IP:127.0.0.1"
 issue router
 issue e2e-tester
+issue TRK-099   # spare test device: the end-to-end tests revoke it to prove revocation works
 for t in $TRUCKS; do issue "$t"; done
 openssl ca -gencrl -config ca.cnf -out crl.pem 2>/dev/null
 # rogue device: valid-looking certificate from a CA the broker does not trust
