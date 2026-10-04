@@ -1,0 +1,19 @@
+{
+  "_comment": "TRUCK and ROUTE reference data for the simulated fleet (Part 2, Figure 6).",
+  "routes": {
+    "OTT-TOR-01": {"origin": "Ottawa", "destination": "Toronto", "waypoints": [[45.4215,-75.6972],[45.0275,-75.9600],[44.6900,-76.2000],[44.2312,-76.4860],[44.1600,-77.3800],[43.9000,-78.8600],[43.6532,-79.3832]]},
+    "TOR-OTT-02": {"origin": "Toronto", "destination": "Ottawa", "waypoints": [[43.6532,-79.3832],[43.9000,-78.8600],[44.1600,-77.3800],[44.2312,-76.4860],[44.6900,-76.2000],[45.0275,-75.9600],[45.4215,-75.6972]]},
+    "MTL-OTT-03": {"origin": "Montreal", "destination": "Ottawa", "waypoints": [[45.5017,-73.5673],[45.4500,-74.1500],[45.3800,-74.6000],[45.4200,-75.2000],[45.4215,-75.6972]]},
+    "OTT-KGN-04": {"origin": "Ottawa", "destination": "Kingston", "waypoints": [[45.4215,-75.6972],[45.0275,-75.9600],[44.6900,-76.2000],[44.2312,-76.4860]]},
+    "TOR-MTL-05": {"origin": "Toronto", "destination": "Montreal", "waypoints": [[43.6532,-79.3832],[44.1600,-77.3800],[44.2312,-76.4860],[44.7500,-75.5000],[45.0200,-74.7300],[45.5017,-73.5673]]},
+    "KGN-MTL-06": {"origin": "Kingston", "destination": "Montreal", "waypoints": [[44.2312,-76.4860],[44.7500,-75.5000],[45.0200,-74.7300],[45.5017,-73.5673]]}
+  },
+  "trucks": [
+    {"truck_id": "TRK-001", "route_id": "OTT-TOR-01", "cargo_type": "vaccines"},
+    {"truck_id": "TRK-002", "route_id": "TOR-OTT-02", "cargo_type": "fresh_produce"},
+    {"truck_id": "TRK-003", "route_id": "MTL-OTT-03", "cargo_type": "vaccines"},
+    {"truck_id": "TRK-004", "route_id": "OTT-KGN-04", "cargo_type": "frozen_food"},
+    {"truck_id": "TRK-005", "route_id": "TOR-MTL-05", "cargo_type": "frozen_food"},
+    {"truck_id": "TRK-006", "route_id": "KGN-MTL-06", "cargo_type": "fresh_produce"}
+  ]
+}
