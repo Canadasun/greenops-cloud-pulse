@@ -86,8 +86,7 @@ def truck_process(truck, faults, cfg):
             truck.inject_fault(scenario)
             log.info("%s scenario -> %s", truck.truck_id, scenario)
         if truck.arrived:  # start the next trip so the demo keeps running
-            truck.__init__(truck.truck_id, truck.route, truck.profile, journey_s=truck.journey_s)
-            truck.inject_fault(scenario)
+            truck.start_next_trip()
         tick(truck, pub)
         time.sleep(cfg["interval"])
 

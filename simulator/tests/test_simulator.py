@@ -137,3 +137,17 @@ def test_compressor_failure_stops_warming_at_the_outside_temperature():
         clock.advance(10)
         msg = truck.next_reading()
     assert msg["temp_c"] == 24.0
+
+
+def test_next_trip_keeps_the_cargo_temperature_and_the_fault():
+    truck, clock = make_truck(journey_s=60)
+    truck.inject_fault("compressor")
+    for _ in range(7):
+        clock.advance(10)
+        last = truck.next_reading()
+    assert truck.arrived
+    truck.start_next_trip()
+    clock.advance(10)
+    nxt = truck.next_reading()
+    assert truck.scenario == "compressor" and nxt["temp_c"] > last["temp_c"]
+    assert nxt["lat"] != last["lat"] and nxt["scheduled_eta"] > last["scheduled_eta"]

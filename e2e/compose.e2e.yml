@@ -1,0 +1,13 @@
+# Faster timings for the automated end-to-end run (the exact 120 s / 5 min rules are covered by the unit tests).
+services:
+  functions:
+    environment:
+      DOOR_LIMIT_S: "30"
+      OFFLINE_AFTER_S: "40"
+      FLEET_WATCHER_SCHEDULE: "*/10 * * * * *"
+  router:
+    environment:
+      ARCHIVE_INTERVAL_S: "30"
+  simulator:
+    environment:
+      JOURNEY_S: "150"

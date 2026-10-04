@@ -1,0 +1,236 @@
+# GreenOps Cloud Pulse on Azure (Part 2, Figure 7). Owner: Marcelbriaud Wafotchoupe (Role 2), with each service's role owner.
+locals {
+  name = "greenops-${var.env}"
+  tags = { project = "greenops-cloud-pulse", env = var.env, course = "CST8922" }
+}
+
+resource "azurerm_resource_group" "rg" {
+  name     = "rg-${local.name}-cc"
+  location = var.location
+  tags     = local.tags
+}
+
+# ---- Ingestion (Role 2): IoT Hub with routing to the built-in endpoint (Alert Function) and the archive
+resource "azurerm_iothub" "hub" {
+  name                = "iot-${local.name}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  sku {
+    name     = var.iot_hub_sku
+    capacity = 1
+  }
+  tags = local.tags
+}
+
+# ---- Storage (Role 4): Blob archive with a 30-day move to the Archive tier, plus storage for the Functions host
+resource "azurerm_storage_account" "data" {
+  name                     = substr(replace("st${local.name}data", "-", ""), 0, 24)
+  resource_group_name      = azurerm_resource_group.rg.name
+  location                 = azurerm_resource_group.rg.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  min_tls_version          = "TLS1_2"
+  tags                     = local.tags
+}
+
+resource "azurerm_storage_container" "archive" {
+  name                  = "telemetry-archive"
+  storage_account_id    = azurerm_storage_account.data.id
+  container_access_type = "private"
+}
+
+resource "azurerm_storage_management_policy" "archive_tier" {
+  storage_account_id = azurerm_storage_account.data.id
+  rule {
+    name    = "archive-after-30-days"
+    enabled = true
+    filters {
+      blob_types   = ["blockBlob"]
+      prefix_match = ["telemetry-archive/telemetry/"]
+    }
+    actions {
+      base_blob {
+        tier_to_archive_after_days_since_modification_greater_than = 30
+      }
+    }
+  }
+}
+
+resource "azurerm_iothub_endpoint_storage_container" "archive" {
+  name                       = "archive"
+  resource_group_name        = azurerm_resource_group.rg.name
+  iothub_id                  = azurerm_iothub.hub.id
+  connection_string          = azurerm_storage_account.data.primary_blob_connection_string
+  container_name             = azurerm_storage_container.archive.name
+  batch_frequency_in_seconds = 300
+  encoding                   = "JSON"
+  file_name_format           = "{iothub}/telemetry/{YYYY}/{MM}/{DD}/{HH}/{mm}-{partition}"
+}
+
+resource "azurerm_iothub_route" "to_alerts" {
+  name                = "to-alert-function"
+  resource_group_name = azurerm_resource_group.rg.name
+  iothub_name         = azurerm_iothub.hub.name
+  source              = "DeviceMessages"
+  condition           = "true"
+  endpoint_names      = ["events"]
+  enabled             = true
+}
+
+resource "azurerm_iothub_route" "to_archive" {
+  name                = "to-archive"
+  resource_group_name = azurerm_resource_group.rg.name
+  iothub_name         = azurerm_iothub.hub.name
+  source              = "DeviceMessages"
+  condition           = "true"
+  endpoint_names      = [azurerm_iothub_endpoint_storage_container.archive.name]
+  enabled             = true
+}
+
+# ---- Live data (Role 4): Cosmos DB for NoSQL, lifetime free tier, three containers (Part 2, Table 2)
+resource "azurerm_cosmosdb_account" "db" {
+  name                = "cosmos-${local.name}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  offer_type          = "Standard"
+  free_tier_enabled   = true
+  consistency_policy { consistency_level = "Session" }
+  geo_location {
+    location          = azurerm_resource_group.rg.location
+    failover_priority = 0
+  }
+  tags = local.tags
+}
+
+resource "azurerm_cosmosdb_sql_database" "greenops" {
+  name                = "greenops"
+  resource_group_name = azurerm_resource_group.rg.name
+  account_name        = azurerm_cosmosdb_account.db.name
+  throughput          = 1000 # shared by all containers – the free-tier allowance
+}
+
+resource "azurerm_cosmosdb_sql_container" "containers" {
+  for_each            = { telemetry = { pk = "/truck_id", ttl = 604800 }, alerts = { pk = "/truck_id", ttl = -1 }, reference = { pk = "/doc_type", ttl = -1 } }
+  name                = each.key
+  resource_group_name = azurerm_resource_group.rg.name
+  account_name        = azurerm_cosmosdb_account.db.name
+  database_name       = azurerm_cosmosdb_sql_database.greenops.name
+  partition_key_paths = [each.value.pk]
+  default_ttl         = each.value.ttl
+}
+
+# ---- Functions (Roles 3, 4, 5): Flex Consumption, Python 3.12, managed identity, Application Insights
+resource "azurerm_log_analytics_workspace" "logs" {
+  name                = "log-${local.name}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  retention_in_days   = 30
+  tags                = local.tags
+}
+
+resource "azurerm_application_insights" "appi" {
+  name                = "appi-${local.name}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  workspace_id        = azurerm_log_analytics_workspace.logs.id
+  application_type    = "web"
+  tags                = local.tags
+}
+
+resource "azurerm_storage_container" "deploy" {
+  name                  = "function-releases"
+  storage_account_id    = azurerm_storage_account.data.id
+  container_access_type = "private"
+}
+
+resource "azurerm_service_plan" "flex" {
+  name                = "asp-${local.name}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  os_type             = "Linux"
+  sku_name            = "FC1"
+  tags                = local.tags
+}
+
+resource "azurerm_function_app_flex_consumption" "func" {
+  name                        = "func-${local.name}"
+  resource_group_name         = azurerm_resource_group.rg.name
+  location                    = azurerm_resource_group.rg.location
+  service_plan_id             = azurerm_service_plan.flex.id
+  storage_container_type      = "blobContainer"
+  storage_container_endpoint  = "${azurerm_storage_account.data.primary_blob_endpoint}${azurerm_storage_container.deploy.name}"
+  storage_authentication_type = "StorageAccountConnectionString"
+  storage_access_key          = azurerm_storage_account.data.primary_access_key
+  runtime_name                = "python"
+  runtime_version             = "3.12"
+  maximum_instance_count      = 40
+  instance_memory_in_mb       = 512
+  identity { type = "SystemAssigned" }
+  site_config {
+    application_insights_connection_string = azurerm_application_insights.appi.connection_string
+  }
+  app_settings = {
+    TRIGGER_MODE           = "iothub"
+    IOTHUB_EVENTS          = "Endpoint=${azurerm_iothub.hub.event_hub_events_endpoint};SharedAccessKeyName=iothubowner;SharedAccessKey=${azurerm_iothub.hub.shared_access_policy[0].primary_key};EntityPath=${azurerm_iothub.hub.event_hub_events_path}"
+    IOTHUB_EVENTHUB_NAME   = azurerm_iothub.hub.event_hub_events_path
+    COSMOS_ENDPOINT        = azurerm_cosmosdb_account.db.endpoint
+    FLEET_WATCHER_SCHEDULE = "0 */1 * * * *"
+    LOGIC_APP_URL          = azurerm_logic_app_trigger_http_request.alert.callback_url
+    ALERT_EMAIL_TO         = var.alert_email
+  }
+  tags = local.tags
+}
+
+# Functions read and write Cosmos DB with their managed identity – no database key in the app settings.
+resource "azurerm_cosmosdb_sql_role_assignment" "func_data" {
+  resource_group_name = azurerm_resource_group.rg.name
+  account_name        = azurerm_cosmosdb_account.db.name
+  role_definition_id  = "${azurerm_cosmosdb_account.db.id}/sqlRoleDefinitions/00000000-0000-0000-0000-000000000002" # Built-in Data Contributor
+  principal_id        = azurerm_function_app_flex_consumption.func.identity[0].principal_id
+  scope               = azurerm_cosmosdb_account.db.id
+}
+
+# ---- Email (Role 3): Logic App with an HTTP trigger; the Office 365 / Outlook action is added in the designer (Part 4)
+resource "azurerm_logic_app_workflow" "alerts" {
+  name                = "logic-${local.name}-alerts"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  tags                = local.tags
+}
+
+resource "azurerm_logic_app_trigger_http_request" "alert" {
+  name         = "alert-received"
+  logic_app_id = azurerm_logic_app_workflow.alerts.id
+  schema       = jsonencode({ type = "object", properties = { to = { type = "string" }, truck_id = { type = "string" }, type = { type = "string" }, details = { type = "string" } } })
+}
+
+# ---- Dashboard (Role 5): Static Web Apps, Free plan
+resource "azurerm_static_web_app" "dashboard" {
+  name                = "swa-${local.name}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = "eastus2" # Static Web Apps is offered in a few regions; it only serves the static files
+  sku_tier            = "Free"
+  sku_size            = "Free"
+  tags                = local.tags
+}
+
+# ---- Cost guardrails (Role 4, NFR-07): budget alerts at USD 1 and USD 5
+resource "azurerm_consumption_budget_resource_group" "budget" {
+  name              = "budget-${local.name}"
+  resource_group_id = azurerm_resource_group.rg.id
+  amount            = 5
+  time_grain        = "Monthly"
+  time_period { start_date = "2026-10-01T00:00:00Z" }
+  notification {
+    enabled        = true
+    threshold      = 20 # 20 % of USD 5 = USD 1
+    operator       = "GreaterThan"
+    contact_emails = var.budget_contact_emails
+  }
+  notification {
+    enabled        = true
+    threshold      = 100
+    operator       = "GreaterThan"
+    contact_emails = var.budget_contact_emails
+  }
+}
