@@ -128,3 +128,12 @@ def test_frozen_cargo_uses_its_own_limits():
 def test_cargo_profile_breach_rule():
     p = CargoProfile("vaccines", 2, 8, 75)
     assert not p.is_breach(4.0, 60) and p.is_breach(8.5, 60) and p.is_breach(1.5, 60) and p.is_breach(5, 80)
+
+
+def test_compressor_failure_stops_warming_at_the_outside_temperature():
+    truck, clock = make_truck()
+    truck.inject_fault("compressor")
+    for _ in range(100):
+        clock.advance(10)
+        msg = truck.next_reading()
+    assert msg["temp_c"] == 24.0

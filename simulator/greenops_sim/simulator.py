@@ -9,6 +9,7 @@ from datetime import datetime, timedelta, timezone
 SCENARIOS = ("none", "compressor", "door", "delay", "offline")
 COMPRESSOR_RISE_C = 0.6        # temperature gained per reading while the compressor is broken
 DELAY_SPEED_FACTOR = 0.15      # a delayed truck moves at 15 % of its normal speed
+AMBIENT_C = 24.0               # a broken compressor warms the cargo up to the outside temperature, not beyond
 
 
 def _iso(t: datetime) -> str:
@@ -64,7 +65,7 @@ class TruckSimulator:
     def _sense(self):
         p = self.profile
         if self.scenario == "compressor":
-            self.temp_c += COMPRESSOR_RISE_C
+            self.temp_c = min(self.temp_c + COMPRESSOR_RISE_C, AMBIENT_C)
         else:  # refrigeration pulls the temperature back towards the middle of the safe range
             span = p.temp_max_c - p.temp_min_c
             self.temp_c += (p.mid_temp_c - self.temp_c) * 0.3 + self.rng.uniform(-0.08, 0.08) * span

@@ -1,0 +1,83 @@
+# GreenOps Cloud Pulse – complete local environment (stand-ins for the Azure services in Part 2, Figure 7).
+# Start: scripts/make_certs.sh  then  docker compose up -d --build      Dashboard: http://localhost:5173
+x-cosmos: &cosmos
+  COSMOS_ENDPOINT: http://cosmos:8081
+  # Well-known, public key of the local Cosmos DB emulator – not a secret. On Azure a managed identity is used instead.
+  COSMOS_KEY: ${COSMOS_KEY:-C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==}
+x-storage: &storage
+  # Well-known Azurite development account – not a secret.
+  STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
+
+services:
+  # ---- Role 2 · Marcelbriaud – Azure IoT Hub stand-in
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports: ["8883:8883"]
+    volumes:
+      - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./broker/acl:/mosquitto/config/acl:ro
+      - ./broker/certs:/mosquitto/certs:ro
+  router:
+    build: ./broker/router
+    depends_on: [mosquitto, azurite, functions]
+    environment:
+      <<: *storage
+      ALERT_FUNCTION_URL: http://functions/api/telemetry
+      ARCHIVE_INTERVAL_S: ${ARCHIVE_INTERVAL_S:-300}
+    volumes: ["./broker/certs:/certs:ro"]
+    restart: unless-stopped
+
+  # ---- Role 4 · Durmusali – Azure Cosmos DB and Blob Storage stand-ins
+  cosmos:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+    command: ["--protocol", "http"]
+    ports: ["8081:8081", "1234:1234"]   # 1234 = Data Explorer
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    command: ["azurite", "--blobHost", "0.0.0.0", "--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0", "--skipApiVersionCheck", "--loose"]
+    ports: ["10000:10000"]
+
+  # ---- Role 3 · Shi (alerting) + Role 4 (repository) + Role 5 · Idowu (Fleet API) – Azure Functions
+  functions:
+    build: { context: ., dockerfile: functions/Dockerfile }
+    depends_on: [cosmos, azurite, mail-relay]
+    ports: ["7071:80"]
+    environment:
+      <<: *cosmos
+      AzureWebJobsStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
+      FUNCTIONS_WORKER_RUNTIME: python
+      TRIGGER_MODE: http
+      FLEET_WATCHER_SCHEDULE: ${FLEET_WATCHER_SCHEDULE:-0 */1 * * * *}
+      OFFLINE_AFTER_S: ${OFFLINE_AFTER_S:-300}
+      DOOR_LIMIT_S: ${DOOR_LIMIT_S:-120}
+      LOGIC_APP_URL: http://mail-relay:8070/
+      ALERT_EMAIL_TO: cold-chain-ops@greenops.local
+    restart: unless-stopped
+
+  # ---- Role 3 · Shi – Logic App email stand-in + local inbox
+  mail-relay:
+    build: ./mail-relay
+    environment: { SMTP_HOST: mailpit, SMTP_PORT: "1025" }
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["8025:8025"]   # inbox web page
+
+  # ---- Role 5 · Idowu – dashboard (Azure Static Web Apps stand-in)
+  dashboard:
+    build: ./dashboard
+    depends_on: [functions, simulator]
+    ports: ["5173:80"]
+
+  # ---- Role 1 · Ying – truck simulator (fault API on 8090)
+  simulator:
+    build: ./simulator
+    depends_on: [mosquitto, router]
+    ports: ["8090:8090"]
+    environment:
+      MQTT_HOST: mosquitto
+      INTERVAL_S: ${INTERVAL_S:-10}
+      JOURNEY_S: ${JOURNEY_S:-1800}
+    volumes:
+      - ./broker/certs:/certs:ro
+      - ./contracts:/contracts:ro
+    restart: unless-stopped

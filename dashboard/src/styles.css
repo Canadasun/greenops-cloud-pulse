@@ -1,0 +1,54 @@
+:root { --bg: #f4f5f2; --card: #ffffff; --ink: #1a1a19; --muted: #5f5f5a; --line: #dedcd5; --brand: #138a5e; --bad: #b42318; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 "Segoe UI", Calibri, system-ui, sans-serif; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 10px 18px; background: #fff; border-bottom: 1px solid var(--line); }
+.brand { font-weight: 700; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+.brand .muted { font-weight: 400; font-size: 13px; }
+.logo { background: var(--brand); color: #fff; border-radius: 7px; padding: 3px 7px; font-size: 14px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; background: #fafaf8; display: flex; align-items: center; gap: 6px; }
+.chip i, .legend i { font-style: normal; color: #fff; font-weight: 700; font-size: 11px; width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+.updated { margin-left: auto; color: var(--muted); font-size: 13px; }
+main { display: grid; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); gap: 14px; padding: 14px 18px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.card.wide { grid-column: 1; }
+.card h2 { font-size: 16px; margin: 0 0 8px; display: flex; align-items: center; gap: 8px; }
+.tag { font-size: 11px; font-weight: 700; background: #fff2c7; border: 1px solid #e6c24a; color: #6b4e00; border-radius: 6px; padding: 1px 6px; }
+.map { height: 470px; border-radius: 10px; }
+.legend { margin-top: 6px; font-size: 13px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.marker { width: 30px; height: 30px; border-radius: 50%; border: 2.5px solid #1a1a19; color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px #0006; }
+.marker.selected { outline: 4px solid #1a1a19; outline-offset: 2px; }
+.detail-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.detail h3 { margin: 0; font-size: 17px; }
+.detail h4 { margin: 12px 0 4px; font-size: 14px; }
+.readings { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0; }
+.readings dt { color: var(--muted); }
+.readings dd { margin: 0; font-weight: 600; }
+.bad { color: var(--bad); }
+.muted { color: var(--muted); }
+.small { font-size: 12px; }
+.error { color: var(--bad); font-weight: 600; }
+.pill { display: inline-block; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 700; background: #eee; }
+.pill-active { background: #fde2e1; color: #842029; }
+.pill-acknowledged { background: #fff2c7; color: #664d03; }
+.pill-resolved { background: #dcf2e6; color: #0f5132; }
+.chart { width: 100%; height: auto; }
+.chart .safe-band { fill: #dcf2e6; }
+.chart .band-label { font-size: 10px; fill: #0f5132; }
+.chart .grid { stroke: #e7e6e0; }
+.chart .tick { font-size: 10px; fill: var(--muted); }
+.chart .temp-line { fill: none; stroke: #2a78d6; stroke-width: 2; }
+.chart .breach-dot { fill: #d64545; stroke: #fff; stroke-width: 1.5; }
+table.alerts { width: 100%; border-collapse: collapse; font-size: 14px; }
+.alerts th, .alerts td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.alerts th { background: #f6f6f3; font-size: 13px; }
+button { border: 1.5px solid #3a3a36; background: #fff; border-radius: 6px; padding: 3px 10px; font-weight: 700; cursor: pointer; }
+button:hover { background: #f1f1ee; }
+.meter { height: 7px; background: #eceae4; border-radius: 4px; margin-top: 3px; overflow: hidden; }
+.meter span { display: block; height: 100%; background: var(--brand); }
+.faults { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 12px; }
+.faults label { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
+.faults select { flex: 1; max-width: 170px; }
+footer { padding: 6px 18px 16px; font-size: 12px; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } .card.wide { grid-column: auto; } .map { height: 360px; } }

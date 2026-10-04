@@ -19,6 +19,7 @@ from shared.models import utcnow
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 log = logging.getLogger("greenops")
+logging.getLogger("azure").setLevel(logging.WARNING)  # hide SDK request/response logs
 
 
 @lru_cache
