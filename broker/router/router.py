@@ -106,6 +106,7 @@ class BlobArchive:
 def main():
     import paho.mqtt.client as mqtt
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
+    logging.getLogger("azure").setLevel(logging.WARNING)  # hide SDK request/response logs
     cert_dir = os.getenv("CERT_DIR", "/certs")
     router = Router(HttpAlertEndpoint(os.environ["ALERT_FUNCTION_URL"], os.getenv("ALERT_FUNCTION_KEY")),
                     BlobArchive(os.environ["STORAGE_CONNECTION_STRING"], os.getenv("ARCHIVE_CONTAINER", "telemetry-archive")))
