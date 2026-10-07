@@ -14,8 +14,6 @@ services:
     build: ./broker
     ports: ["8883:8883"]
     volumes:
-      - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - ./broker/acl:/mosquitto/config/acl:ro
       - ./broker/certs/mosquitto:/mosquitto/certs:ro
       - broker-data:/mosquitto/data
   router:
