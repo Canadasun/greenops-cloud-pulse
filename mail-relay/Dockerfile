@@ -3,6 +3,7 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY relay.py .
 RUN useradd --create-home relay
+RUN mkdir -p /data && chown relay:relay /data
 USER relay
 EXPOSE 8070
 CMD ["python", "relay.py"]

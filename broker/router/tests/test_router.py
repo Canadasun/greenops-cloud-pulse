@@ -87,3 +87,29 @@ def test_device_id_in_payload_must_match_the_topic():  # defence in depth for FR
     r.on_message("devices/TRK-001/messages/events/", json.dumps({**MSG, "truck_id": "TRK-002"}).encode())
     r.flush_alerts()
     assert alert.calls == [] and r.stats["invalid"] == 1
+
+
+def test_archive_failure_survives_restart(tmp_path):
+    class Broken:
+        def upload(self,*args):raise ConnectionError('storage down')
+    path=str(tmp_path/'spool.sqlite')
+    r=Router(FakeAlertEndpoint(),Broken(),spool_path=path)
+    r.on_message('devices/TRK-001/messages/events/',json.dumps(MSG).encode())
+    assert r.flush_archive() is None and len(r.archive_buffer)==1
+    archive=FakeArchive();restarted=Router(FakeAlertEndpoint(),archive,spool_path=path)
+    assert restarted.flush_archive() and len(archive.blobs)==1
+    restarted.flush_alerts()
+    assert not restarted.archive_buffer and not restarted.pending
+
+
+def test_invalid_array_is_quarantined_without_callback_exception():
+    r,_,_=make();r.on_message('devices/TRK-001/messages/events/',b'[]')
+    assert r.stats['invalid']==1 and not r.pending
+
+
+def test_dead_letter_failure_retains_delivery():
+    class Broken:
+        def upload(self,*args):raise ConnectionError('storage down')
+    r=Router(FakeAlertEndpoint(99),Broken(),sleep=lambda _:None)
+    r.on_message('devices/TRK-001/messages/events/',json.dumps(MSG).encode());r.flush_alerts()
+    assert len(r.pending)==1

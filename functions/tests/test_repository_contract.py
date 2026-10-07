@@ -67,3 +67,9 @@ def test_telemetry_container_expires_readings_after_7_days():
     from shared.repository import CosmosFleetRepository
     r = CosmosFleetRepository(os.environ["COSMOS_ENDPOINT"], os.getenv("COSMOS_KEY", EMULATOR_KEY), database=f"test-{uuid.uuid4().hex[:8]}")
     assert r.telemetry_ttl() == TELEMETRY_TTL_S == 604800
+
+
+def test_fault_choices_are_stored_per_truck(repo):  # Azure demo: the dashboard and the trucks share this table
+    assert repo.get_faults() == {}
+    repo.set_fault("TRK-003", "compressor"); repo.set_fault("TRK-001", "door"); repo.set_fault("TRK-003", "none")
+    assert repo.get_faults() == {"TRK-001": "door", "TRK-003": "none"}

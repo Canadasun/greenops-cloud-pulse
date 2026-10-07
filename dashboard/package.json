@@ -3,12 +3,13 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "GreenOps Cloud Pulse dashboard – Role 5 (Idowu Ayeni)",
+  "description": "GreenOps Cloud Pulse dashboard \u2013 Role 5 (Idowu Ayeni)",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:browser": "node ../e2e/browser_regressions.cjs"
   },
   "dependencies": {
     "leaflet": "1.9.4",
@@ -21,6 +22,7 @@
     "@testing-library/react": "16.1.0",
     "@vitejs/plugin-react": "4.3.4",
     "jsdom": "25.0.1",
+    "playwright": "1.61.0",
     "vite": "5.4.11",
     "vitest": "2.1.8"
   }

@@ -43,7 +43,8 @@ def test_fleet_has_six_trucks_from_reference_data():
     assert fleet["TRK-004"].profile.cargo_type == "frozen_food"
 
 
-def test_control_api_switches_faults_on_and_off():
+def test_control_api_switches_faults_on_and_off(monkeypatch):
+    monkeypatch.setenv("SIM_CONTROL_TOKEN", "test-operator")
     faults = {}
     server = ControlServer(("127.0.0.1", 0), faults, valid_trucks={"TRK-001"})
     threading.Thread(target=server.serve_forever, daemon=True).start()
@@ -51,7 +52,7 @@ def test_control_api_switches_faults_on_and_off():
 
     def call(method, path, body=None):
         req = urllib.request.Request(base + path, method=method, data=json.dumps(body).encode() if body else None,
-                                     headers={"Content-Type": "application/json"})
+                                     headers={"Content-Type": "application/json", "Authorization": "Bearer test-operator"})
         try:
             with urllib.request.urlopen(req) as r:
                 return r.status, json.loads(r.read())
@@ -65,3 +66,20 @@ def test_control_api_switches_faults_on_and_off():
     assert call("POST", "/trucks/TRK-999/fault", {"scenario": "door"})[0] == 404
     assert call("DELETE", "/trucks/TRK-001/fault")[1]["scenario"] == "none"
     server.shutdown()
+
+
+# ---- Azure IoT Hub mode (Role 2 – Marcelbriaud Wafotchoupe): same truck code, real IoT Hub
+from greenops_sim.runner import iothub_settings, apply_remote_faults
+
+
+def test_iothub_settings_use_the_device_username_and_json_topic():
+    s = iothub_settings("iot-greenops.azure-devices.net", "TRK-003")
+    assert s["username"] == "iot-greenops.azure-devices.net/TRK-003/?api-version=2021-04-12"
+    assert s["ca_certs"] is None  # IoT Hub uses a public certificate, so the system CA list is used
+    assert s["topic_suffix"] == "$.ct=application%2Fjson&$.ce=utf-8"  # body stays readable JSON in routing and the archive
+
+
+def test_remote_faults_update_only_known_trucks_and_valid_scenarios():
+    faults = {}
+    apply_remote_faults(faults, {"TRK-001": "door", "TRK-999": "door", "TRK-002": "explode"}, {"TRK-001", "TRK-002"})
+    assert faults == {"TRK-001": "door"}

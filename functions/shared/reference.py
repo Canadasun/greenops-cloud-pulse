@@ -5,7 +5,9 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
-DEFAULT_DIR = Path(__file__).resolve().parents[2] / "contracts"  # repo-root contracts/, copied into the container
+_APP = Path(__file__).resolve().parents[1]
+# Azure package: contracts/ is bundled next to function_app.py; repository / container: the repo-root contracts/
+DEFAULT_DIR = _APP / "contracts" if (_APP / "contracts").is_dir() else _APP.parent / "contracts"
 
 
 def _dir() -> Path:

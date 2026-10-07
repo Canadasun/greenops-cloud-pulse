@@ -19,7 +19,12 @@ class FakeNotifier:
         return {"channel": "email", "to": "cold-chain-ops@greenops.local"}
 
 
-def reading(truck="TRK-001", t=T0, temp=4.2, hum=60, door=False, cargo="vaccines", lim=(2, 8), lat=45.4215, lon=-75.6972, eta=None, route="OTT-TOR-01"):
+def reading(truck="TRK-001", t=T0, temp=4.2, hum=60, door=False, cargo=None, lim=None, lat=45.4215, lon=-75.6972, eta=None, route=None):
+    from shared.reference import fleet, cargo_profiles
+    registered = next(t for t in fleet()["trucks"] if t["truck_id"] == truck)
+    cargo = cargo or registered["cargo_type"]
+    route = route or registered["route_id"]
+    lim = lim or (cargo_profiles()[cargo]["temp_min_c"], cargo_profiles()[cargo]["temp_max_c"])
     return {"truck_id": truck, "route_id": route, "timestamp": iso(t), "lat": lat, "lon": lon, "speed_kmh": 80, "temp_c": temp,
             "humidity_pct": hum, "door_open": door, "cargo_type": cargo, "temp_min_c": lim[0], "temp_max_c": lim[1],
             "scheduled_eta": iso(eta or T0 + timedelta(hours=4))}
@@ -116,8 +121,8 @@ def test_truck_silent_for_five_minutes_is_flagged_offline_once():  # FR-08, Tabl
     process_batch([reading()], repo, svc, now=T0)
     for minute in range(1, 9):
         check_fleet(repo, svc, now=T0 + timedelta(minutes=minute), offline_after_s=300)
-    offline = [a for a in repo.alerts.values() if a.type == "OFFLINE"]
-    assert len(offline) == 1 and offline[0].started_at == iso(T0 + timedelta(minutes=6)) and len(notifier.sent) == 1
+    offline = [a for a in repo.alerts.values() if a.type == "OFFLINE" and a.truck_id == "TRK-001"]
+    assert len(offline) == 1 and offline[0].started_at == iso(T0 + timedelta(minutes=6)) and len([a for a in notifier.sent if a.truck_id == "TRK-001"]) == 1
 
 
 def test_offline_alert_resolves_when_data_arrives_again():
