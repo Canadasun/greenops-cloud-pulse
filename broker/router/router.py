@@ -12,6 +12,9 @@ import threading
 import time
 import urllib.request
 import uuid
+import sqlite3
+import hashlib
+from pathlib import Path
 from datetime import datetime, timezone
 
 log = logging.getLogger("router")
@@ -23,54 +26,93 @@ def archive_blob_name(now, batch_id):
 
 
 class Router:
-    def __init__(self, send_to_alerts, archive, max_batch=50, sleep=time.sleep):
+    """SQLite spool: acknowledge MQTT only after durable receipt, retire after both sinks."""
+    def __init__(self, send_to_alerts, archive, max_batch=50, sleep=time.sleep, spool_path=":memory:"):
         self.send_to_alerts, self.archive, self.max_batch, self.sleep = send_to_alerts, archive, max_batch, sleep
-        self.pending, self.archive_buffer = [], []
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
+        self.db = sqlite3.connect(spool_path, check_same_thread=False)
+        self.db.execute("PRAGMA journal_mode=WAL")
+        self.db.execute("PRAGMA synchronous=FULL")
+        self.db.execute("CREATE TABLE IF NOT EXISTS messages (id INTEGER PRIMARY KEY, payload TEXT, received TEXT, delivered INTEGER DEFAULT 0, archived INTEGER DEFAULT 0)")
+        self.db.execute("CREATE TABLE IF NOT EXISTS quarantine (id TEXT PRIMARY KEY, topic TEXT, payload TEXT, reason TEXT)")
+        self.db.commit()
         self.stats = {"received": 0, "delivered": 0, "invalid": 0, "dead_lettered": 0, "archived": 0}
+
+    @property
+    def pending(self):
+        return [json.loads(r[1]) for r in self._rows("delivered")]
+
+    @property
+    def archive_buffer(self):
+        return [json.loads(r[1]) for r in self._rows("archived")]
+
+    def _rows(self, sink):
+        with self.lock:
+            return self.db.execute(f"SELECT id,payload,received FROM messages WHERE {sink}=0 ORDER BY id LIMIT 500", ()).fetchall()
+
+    def _done(self, rows, sink):
+        with self.lock, self.db:
+            self.db.executemany(f"UPDATE messages SET {sink}=1 WHERE id=?", [(r[0],) for r in rows])
+            self.db.execute("DELETE FROM messages WHERE delivered=1 AND archived=1")
 
     def on_message(self, topic, payload: bytes):
         try:
+            if len(payload) > 16384:
+                raise ValueError("event exceeds 16 KiB")
             msg = json.loads(payload)
-            device = topic.split("/")[1]
-            if msg.get("truck_id") != device:
-                raise ValueError(f"payload truck_id {msg.get('truck_id')} does not match topic device {device}")
+            parts = topic.split("/")
+            if not isinstance(msg, dict) or len(parts) != 5 or parts[0] != "devices" or parts[2:] != ["messages", "events", ""]:
+                raise ValueError("invalid topic or message object")
+            if msg.get("truck_id") != parts[1]:
+                raise ValueError("payload identity does not match device topic")
         except (ValueError, IndexError) as e:
+            with self.lock, self.db:
+                self.db.execute("INSERT OR IGNORE INTO quarantine VALUES (?,?,?,?)", (hashlib.sha256(payload).hexdigest(), topic, payload[:16384].decode(errors="replace"), str(e)))
             self.stats["invalid"] += 1
-            log.warning("skipped invalid message on %s: %s", topic, e)
+            log.warning("quarantined invalid message on %s: %s", topic, e)
             return
-        with self.lock:
+        with self.lock, self.db:
+            self.db.execute("INSERT INTO messages(payload,received) VALUES (?,?)", (json.dumps(msg, separators=(",", ":")), datetime.now(timezone.utc).isoformat()))
             self.stats["received"] += 1
-            self.pending.append(msg)
-            self.archive_buffer.append(msg)
 
     def flush_alerts(self):
-        with self.lock:
-            batch, self.pending = self.pending, []
-        for i in range(0, len(batch), self.max_batch):
-            chunk = batch[i:i + self.max_batch]
+        rows = self._rows("delivered")
+        for i in range(0, len(rows), self.max_batch):
+            group = rows[i:i + self.max_batch]
+            chunk = [json.loads(r[1]) for r in group]
             for attempt in range(1, RETRIES + 1):
                 try:
                     self.send_to_alerts(chunk)
+                    self._done(group, "delivered")
                     self.stats["delivered"] += len(chunk)
                     break
-                except Exception as e:  # noqa: BLE001 – any delivery failure is retried
-                    log.warning("alert delivery failed (attempt %d/%d): %s", attempt, RETRIES, e)
+                except Exception as e:
+                    log.warning("alert delivery attempt %d/%d failed: %s", attempt, RETRIES, e)
                     self.sleep(2 ** attempt)
             else:
+                data = "\n".join(r[1] for r in group).encode()
+                name = "deadletter/" + hashlib.sha256(data).hexdigest() + ".jsonl"
+                try:
+                    self.archive.upload(name, data)
+                except Exception as e:
+                    log.warning("dead-letter storage unavailable; retained in spool: %s", e)
+                    return
+                self._done(group, "delivered")
                 self.stats["dead_lettered"] += len(chunk)
-                name = "deadletter/" + archive_blob_name(datetime.now(timezone.utc), uuid.uuid4().hex[:8]).split("/", 1)[1]
-                self.archive.upload(name, "\n".join(json.dumps(m) for m in chunk).encode())
 
     def flush_archive(self, now=None):
-        with self.lock:
-            batch, self.archive_buffer = self.archive_buffer, []
-        if not batch:
+        rows = self._rows("archived")
+        if not rows:
             return None
-        name = archive_blob_name(now or datetime.now(timezone.utc), uuid.uuid4().hex[:8])
-        self.archive.upload(name, "\n".join(json.dumps(m, separators=(",", ":")) for m in batch).encode())
-        self.stats["archived"] += len(batch)
-        log.info("archived %d messages to %s", len(batch), name)
+        data = "\n".join(r[1] for r in rows).encode()
+        name = archive_blob_name(now or datetime.fromisoformat(rows[0][2]), hashlib.sha256(data).hexdigest()[:24])
+        try:
+            self.archive.upload(name, data)
+        except Exception as e:
+            log.warning("archive unavailable; retained in spool: %s", e)
+            return None
+        self._done(rows, "archived")
+        self.stats["archived"] += len(rows)
         return name
 
 
@@ -80,7 +122,7 @@ class HttpAlertEndpoint:
 
     def __call__(self, messages):
         req = urllib.request.Request(self.url, data=json.dumps(messages).encode(), method="POST",
-                                     headers={"Content-Type": "application/json", **({"x-functions-key": self.key} if self.key else {})})
+                                     headers={"Content-Type": "application/json", **({"Authorization": "Bearer " + self.key} if self.key else {})})
         with urllib.request.urlopen(req, timeout=15) as r:
             if r.status >= 300:
                 raise ConnectionError(f"HTTP {r.status}")
@@ -108,13 +150,21 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     logging.getLogger("azure").setLevel(logging.WARNING)  # hide SDK request/response logs
     cert_dir = os.getenv("CERT_DIR", "/certs")
-    router = Router(HttpAlertEndpoint(os.environ["ALERT_FUNCTION_URL"], os.getenv("ALERT_FUNCTION_KEY")),
-                    BlobArchive(os.environ["STORAGE_CONNECTION_STRING"], os.getenv("ARCHIVE_CONTAINER", "telemetry-archive")))
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="router", protocol=mqtt.MQTTv5)
+    router = Router(HttpAlertEndpoint(os.environ["ALERT_FUNCTION_URL"], os.environ["INGESTION_TOKEN"]),
+                    BlobArchive(os.environ["STORAGE_CONNECTION_STRING"], os.getenv("ARCHIVE_CONTAINER", "telemetry-archive")),
+                    spool_path=os.getenv("SPOOL_PATH", "/data/router.sqlite"))
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="router", protocol=mqtt.MQTTv311, clean_session=False, manual_ack=True)
     client.tls_set(ca_certs=f"{cert_dir}/ca.crt", certfile=f"{cert_dir}/router.crt", keyfile=f"{cert_dir}/router.key",
                    tls_version=ssl.PROTOCOL_TLS_CLIENT)
     client.on_connect = lambda c, u, f, rc, p=None: (log.info("connected: %s", rc), c.subscribe("devices/+/messages/events/", qos=1))
-    client.on_message = lambda c, u, m: router.on_message(m.topic, m.payload)
+    def receive(c, u, m):
+        try:
+            router.on_message(m.topic, m.payload)
+            c.ack(m.mid, m.qos)
+        except Exception:
+            log.exception("durable receipt failed; restarting without acknowledging MQTT")
+            os._exit(1)
+    client.on_message = receive
     while True:
         try:
             client.connect(os.getenv("MQTT_HOST", "mosquitto"), int(os.getenv("MQTT_PORT", "8883")))

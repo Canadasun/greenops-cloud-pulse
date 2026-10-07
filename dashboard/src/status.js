@@ -1,11 +1,11 @@
 // Status rules shown on the map and in the header (Part 1, Section 5.5; Part 2, Figure 8).
 // Every status has a colour AND a letter, so it is readable without colour.
 export const STATUS = {
-  normal: { label: 'Normal', letter: 'N', color: '#1f9d63', text: '#0f5132' },
-  warning: { label: 'Warning', letter: 'W', color: '#e0a100', text: '#664d03' },
-  breach: { label: 'Breach', letter: 'B', color: '#d64545', text: '#842029' },
-  offline: { label: 'Offline', letter: 'O', color: '#8c8c88', text: '#41413e' },
-  waiting: { label: 'Waiting for data', letter: '…', color: '#c9c9c4', text: '#41413e' },
+  normal: { label: 'Normal', letter: 'N', color: '#dcf2e6', text: '#0f5132' },
+  warning: { label: 'Warning', letter: 'W', color: '#fff2c7', text: '#664d03' },
+  breach: { label: 'Breach', letter: 'B', color: '#fde2e1', text: '#842029' },
+  offline: { label: 'Offline', letter: 'O', color: '#e5e7eb', text: '#41413e' },
+  waiting: { label: 'Waiting for data', letter: '…', color: '#f0f1ef', text: '#41413e' },
 };
 
 export const ALERT_TITLES = {
@@ -42,4 +42,9 @@ export function temp(c) {
 
 export function inRange(t) {
   return t.temp_c != null && t.temp_c >= t.temp_min_c && t.temp_c <= t.temp_max_c;
+}
+
+export function timestamp(value) {
+  if (!value) return '—';
+  return new Date(value).toLocaleString('en-CA', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZoneName: 'short' });
 }

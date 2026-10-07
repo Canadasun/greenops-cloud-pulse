@@ -1,0 +1,4 @@
+tfplan
+apply.log
+.terraform/
+plan.txt

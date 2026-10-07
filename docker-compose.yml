@@ -11,42 +11,50 @@ x-storage: &storage
 services:
   # ---- Role 2 · Marcelbriaud – Azure IoT Hub stand-in
   mosquitto:
-    image: eclipse-mosquitto:2
+    build: ./broker
     ports: ["8883:8883"]
     volumes:
       - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
       - ./broker/acl:/mosquitto/config/acl:ro
-      - ./broker/certs:/mosquitto/certs:ro
+      - ./broker/certs/mosquitto:/mosquitto/certs:ro
+      - broker-data:/mosquitto/data
   router:
     build: ./broker/router
     depends_on: [mosquitto, azurite, functions]
     environment:
       <<: *storage
       ALERT_FUNCTION_URL: http://functions/api/telemetry
+      INGESTION_TOKEN: ${INGESTION_TOKEN:?run python3 scripts/init_local.py}
       ARCHIVE_INTERVAL_S: ${ARCHIVE_INTERVAL_S:-300}
-    volumes: ["./broker/certs:/certs:ro"]
+    volumes: ["./broker/certs/router:/certs:ro", "router-data:/data"]
     restart: unless-stopped
 
   # ---- Role 4 · Durmusali – Azure Cosmos DB and Blob Storage stand-ins
   cosmos:
     image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
     command: ["--protocol", "http"]
-    ports: ["8081:8081", "1234:1234"]   # 1234 = Data Explorer
+    volumes: ["cosmos-data:/data"]
+    ports: ["127.0.0.1:8081:8081", "127.0.0.1:1234:1234"]   # 1234 = Data Explorer
   azurite:
     image: mcr.microsoft.com/azure-storage/azurite:latest
     command: ["azurite", "--blobHost", "0.0.0.0", "--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0", "--skipApiVersionCheck", "--loose"]
-    ports: ["10000:10000"]
+    ports: ["127.0.0.1:10000:10000"]
+    volumes: ["azurite-data:/data"]
 
   # ---- Role 3 · Shi (alerting) + Role 4 (repository) + Role 5 · Idowu (Fleet API) – Azure Functions
   functions:
     build: { context: ., dockerfile: functions/Dockerfile }
     depends_on: [cosmos, azurite, mail-relay]
-    ports: ["7071:80"]
+    ports: ["127.0.0.1:7071:80"]
     environment:
       <<: *cosmos
       AzureWebJobsStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
       FUNCTIONS_WORKER_RUNTIME: python
       TRIGGER_MODE: http
+      OPERATOR_TOKENS: ${OPERATOR_TOKENS:?run python3 scripts/init_local.py}
+      INGESTION_TOKEN: ${INGESTION_TOKEN:?run python3 scripts/init_local.py}
+      MAIL_RELAY_TOKEN: ${MAIL_RELAY_TOKEN:?run python3 scripts/init_local.py}
+      DELIVERY_CALLBACK_TOKEN: ${DELIVERY_CALLBACK_TOKEN:?run python3 scripts/init_local.py}
       FLEET_WATCHER_SCHEDULE: ${FLEET_WATCHER_SCHEDULE:-0 */1 * * * *}
       OFFLINE_AFTER_S: ${OFFLINE_AFTER_S:-300}
       DOOR_LIMIT_S: ${DOOR_LIMIT_S:-120}
@@ -57,7 +65,11 @@ services:
   # ---- Role 3 · Shi – Logic App email stand-in + local inbox
   mail-relay:
     build: ./mail-relay
-    environment: { SMTP_HOST: mailpit, SMTP_PORT: "1025" }
+    environment:
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      MAIL_RELAY_TOKEN: ${MAIL_RELAY_TOKEN:?run python3 scripts/init_local.py}
+    volumes: ["relay-data:/data"]
   mailpit:
     image: axllent/mailpit:latest
     ports: ["8025:8025"]   # inbox web page
@@ -72,12 +84,21 @@ services:
   simulator:
     build: ./simulator
     depends_on: [mosquitto, router]
-    ports: ["8090:8090"]
+    ports: ["127.0.0.1:8090:8090"]
     environment:
       MQTT_HOST: mosquitto
+      FAULTS_URL: http://functions/api/sim/trucks
+      SIM_CONTROL_TOKEN: ${SIM_CONTROL_TOKEN:?run python3 scripts/init_local.py}
       INTERVAL_S: ${INTERVAL_S:-10}
       JOURNEY_S: ${JOURNEY_S:-1800}
     volumes:
-      - ./broker/certs:/certs:ro
+      - ./broker/certs/simulator:/certs:ro
       - ./contracts:/contracts:ro
     restart: unless-stopped
+
+volumes:
+  broker-data:
+  router-data:
+  cosmos-data:
+  azurite-data:
+  relay-data:
