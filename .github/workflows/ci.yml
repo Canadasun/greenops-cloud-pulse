@@ -33,9 +33,8 @@ jobs:
           docker run -d --name mosquitto -p 8883:8883 \
             -v $PWD/broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro \
             -v $PWD/broker/acl:/mosquitto/config/acl:ro -v $PWD/broker/certs/mosquitto:/mosquitto/certs:ro greenops-broker-ci
-          sleep 3
-          docker logs mosquitto
-          ls -ln broker/certs/mosquitto
+          for i in $(seq 1 30); do docker logs mosquitto 2>&1 | grep -q "running" && break; sleep 1; done
+          docker logs mosquitto; docker ps -a --filter name=mosquitto --format '{{.Status}}'
           python -m pytest -v broker/tests
 
   functions:            # Role 3 – Shi Wang · Role 4 – Durmusali Unal · Role 5 – Idowu Ayeni
