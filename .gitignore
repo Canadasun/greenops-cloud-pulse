@@ -9,6 +9,7 @@ __pycache__/
 .venv/
 node_modules/
 dist/
+dist-azure/
 .pytest_cache/
 coverage/
 playwright-report/
