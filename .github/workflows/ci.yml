@@ -28,6 +28,7 @@ jobs:
       - name: Broker security tests (live Mosquitto with mutual TLS)
         run: |
           bash scripts/make_certs.sh
+          sudo chgrp -R 1000 broker/certs/mosquitto broker/certs/router broker/certs/simulator && sudo chmod g+s broker/certs/mosquitto broker/certs/router broker/certs/simulator  # containers run as GID 1000
           docker build -t greenops-broker-ci broker
           docker run -d --name mosquitto -p 8883:8883 \
             -v $PWD/broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro \
@@ -80,6 +81,7 @@ jobs:
       - run: pip install -r e2e/requirements.txt
       - run: python3 scripts/init_local.py
       - run: bash scripts/make_certs.sh
+      - run: sudo chgrp -R 1000 broker/certs/mosquitto broker/certs/router broker/certs/simulator && sudo chmod g+s broker/certs/mosquitto broker/certs/router broker/certs/simulator  # containers run as GID 1000
       - run: docker compose -f docker-compose.yml -f e2e/compose.e2e.yml up -d --build
       - run: python -m pytest -v e2e
       - if: failure()
