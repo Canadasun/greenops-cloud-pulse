@@ -34,6 +34,8 @@ jobs:
             -v $PWD/broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro \
             -v $PWD/broker/acl:/mosquitto/config/acl:ro -v $PWD/broker/certs/mosquitto:/mosquitto/certs:ro greenops-broker-ci
           sleep 3
+          docker logs mosquitto
+          ls -ln broker/certs/mosquitto
           python -m pytest -v broker/tests
 
   functions:            # Role 3 – Shi Wang · Role 4 – Durmusali Unal · Role 5 – Idowu Ayeni
