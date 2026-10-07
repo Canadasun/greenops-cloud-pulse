@@ -1,0 +1,15 @@
+email for alt-d6ed11f8cf5e failed: temporary outage
+out_of_order 2026-10-03T14:00:00Z [('TEMPERATURE', 'RESOLVED')]
+replay 2 readings 2 alerts 2 emails
+email_recovery 1 attempts None
+new_trip_delay [('DELAYED', 'ACTIVE')]
+spoofed_vaccine_limits 0 alerts at 20 C
+poison_batch KeyError 0 stored
+archive_failure ConnectionError remaining 0
+router_array AttributeError
+db_outage_hidden {'truck_id': 'TRK-001'} {}
+input_validation {'hours': 'abc'} b'' ValueError
+input_validation {'hours': 'NaN'} b'' ValueError
+input_validation {'limit': 'abc'} b'' ValueError
+input_validation {} b'[1]' AttributeError
+concurrent_alert 2 open alerts 2 emails

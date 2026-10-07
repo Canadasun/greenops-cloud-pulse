@@ -3,20 +3,27 @@ POST / with {"to","alert_id","truck_id","type","details","started_at"} → one e
 import json
 import os
 import smtplib
+import hmac
+import sqlite3
+import threading
 from email.message import EmailMessage
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 TITLES = {"TEMPERATURE": "Temperature breach", "HUMIDITY": "Humidity breach", "DOOR_OPEN": "Cargo door left open",
           "OFFLINE": "Truck offline", "DELAYED": "Truck delayed"}
 REQUIRED = ("to", "alert_id", "truck_id", "type", "details", "started_at")
+SEND_LOCK = threading.Lock()
 
 
 def build_email(alert, sender="alerts@greenops.local"):
+    if not isinstance(alert, dict) or any(not isinstance(alert.get(k), str) for k in REQUIRED):
+        raise ValueError("email fields must be strings")
     missing = [k for k in REQUIRED if not alert.get(k)]
     if missing:
         raise ValueError(f"missing fields: {missing}")
     msg = EmailMessage()
     msg["From"], msg["To"] = sender, alert["to"]
+    msg["Message-ID"] = f"<{alert['alert_id']}@greenops.local>"
     msg["Subject"] = f"[GreenOps] {TITLES.get(alert['type'], alert['type'])} – {alert['truck_id']}"
     msg.set_content(
         f"GreenOps Cloud Pulse alert\n\nTruck: {alert['truck_id']}\nProblem: {TITLES.get(alert['type'], alert['type'])}\n"
@@ -45,14 +52,27 @@ class Handler(BaseHTTPRequestHandler):
         self._reply(200, {"status": "ok"})
 
     def do_POST(self):
+        token = os.getenv("MAIL_RELAY_TOKEN", "")
+        supplied = self.headers.get("Authorization", "")
+        if not token or not hmac.compare_digest(supplied, "Bearer " + token):
+            return self._reply(401, {"error": "service credential required"})
         try:
-            alert = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))))
-            send(alert)
+            length = int(self.headers.get("Content-Length", 0))
+            if not 0 < length <= 16384:
+                return self._reply(413, {"error": "invalid body size"})
+            alert = json.loads(self.rfile.read(length))
+            build_email(alert)
+            # Persist receipts so a retried HTTP delivery does not send another email.
+            with SEND_LOCK, sqlite3.connect(os.getenv("RECEIPTS_DB", "/data/receipts.sqlite")) as db:
+                db.execute("CREATE TABLE IF NOT EXISTS sent (id TEXT PRIMARY KEY)")
+                if not db.execute("SELECT id FROM sent WHERE id=?", (alert["alert_id"],)).fetchone():
+                    send(alert)
+                    db.execute("INSERT INTO sent VALUES (?)", (alert["alert_id"],))
         except ValueError as e:
             return self._reply(400, {"error": str(e)})
         except OSError as e:
             return self._reply(502, {"error": f"mail server unavailable: {e}"})
-        self._reply(202, {"status": "sent", "alert_id": alert["alert_id"]})
+        self._reply(200, {"status": "sent", "alert_id": alert["alert_id"]})
 
 
 if __name__ == "__main__":

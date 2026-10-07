@@ -1,0 +1,16 @@
+# The six trucks on this PC, sending to the real Azure IoT Hub (Role 1 – Ying Song; Role 2 – Marcelbriaud Wafotchoupe).
+# Everything else runs in Azure. Start:  IOTHUB_HOSTNAME=... FUNCTION_URL=... docker compose -f docker-compose.azure.yml up -d --build
+# (scripts/start_azure_trucks.sh fills both values in from Terraform). Stop: docker compose -f docker-compose.azure.yml down
+name: greenops-azure-trucks
+services:
+  simulator:
+    build: ./simulator
+    environment:
+      IOTHUB_HOSTNAME: ${IOTHUB_HOSTNAME:?run scripts/start_azure_trucks.sh}
+      FAULTS_URL: ${FUNCTION_URL:?run scripts/start_azure_trucks.sh}/api/sim/trucks
+      INTERVAL_S: ${INTERVAL_S:-10}
+      JOURNEY_S: ${JOURNEY_S:-1800}
+    volumes:
+      - ./broker/certs/simulator:/certs:ro
+      - ./contracts:/contracts:ro
+    restart: unless-stopped

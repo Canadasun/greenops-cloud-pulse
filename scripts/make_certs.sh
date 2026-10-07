@@ -8,6 +8,11 @@
 # Output goes to broker/certs/ (ignored by Git – certificates are never committed).
 set -euo pipefail
 cd "$(dirname "$0")/../broker/certs"
+umask 077
+if [ -f ca.key ]; then
+  echo "CA already exists; refusing to replace device identities. Use issue_cert.sh or an explicit rotation procedure." >&2
+  exit 1
+fi
 DAYS=825
 TRUCKS="${TRUCKS:-TRK-001 TRK-002 TRK-003 TRK-004 TRK-005 TRK-006}"
 rm -rf ca-db && mkdir -p ca-db && touch ca-db/index.txt && echo 1000 > ca-db/serial && echo 1000 > ca-db/crlnumber
@@ -47,5 +52,7 @@ openssl req -x509 -newkey rsa:2048 -nodes -keyout rogue-ca.key -out rogue-ca.crt
 openssl req -newkey rsa:2048 -nodes -keyout TRK-666.key -out TRK-666.csr -subj "/CN=TRK-666" 2>/dev/null
 openssl x509 -req -in TRK-666.csr -CA rogue-ca.crt -CAkey rogue-ca.key -CAcreateserial -out TRK-666.crt -days 30 2>/dev/null
 rm -f TRK-666.csr rogue-ca.srl
-chmod 644 *.crt *.key crl.pem   # readable by the containers (local demo only)
+chmod 600 *.key
+chmod 644 *.crt crl.pem
+python3 ../../scripts/stage_certs.py
 echo "certificates written to broker/certs: $(ls *.crt | tr '\n' ' ')"

@@ -2,6 +2,9 @@
 They need a running broker: BROKER_HOST / BROKER_PORT (default localhost:8883) and CERT_DIR (default ../certs).
 Acceptance criterion FR-03: unregistered certificates are refused. FR-04: a truck can publish only to its own topic."""
 import os
+import json
+import uuid
+from datetime import datetime, timezone, timedelta
 import ssl
 import threading
 import time
@@ -40,20 +43,35 @@ def listen():
     """Subscribe as the router identity and collect everything it receives."""
     got = []
     r = client("router")
-    r.on_message = lambda cl, u, m: got.append(m.topic)
+    r.on_message = lambda cl, u, m: got.append((m.topic, m.payload.decode()))
     assert connects(r)
     r.subscribe("devices/+/messages/events/", qos=1)
     time.sleep(0.5)
     return r, got
 
 
+def payload(truck):
+    data = json.loads((Path(__file__).resolve().parents[2] / "contracts/fleet.json").read_text())
+    profiles = json.loads((Path(__file__).resolve().parents[2] / "contracts/cargo_profiles.json").read_text())
+    t = next(t for t in data['trucks'] if t['truck_id'] == truck)
+    profile = profiles[t['cargo_type']]
+    # A complete historical sample, distinguishable from real fleet traffic. It cannot
+    # overwrite a current reading due to the processing watermark.
+    when = datetime(2020, 1, 1, tzinfo=timezone.utc) + timedelta(microseconds=uuid.uuid4().int % 1000000)
+    lat,lon = data['routes'][t['route_id']]['waypoints'][0]
+    return json.dumps({**t, 'timestamp':when.isoformat(), 'scheduled_eta':(when+timedelta(hours=4)).isoformat(),
+        'lat':lat,'lon':lon,'speed_kmh':0,'temp_c':(profile['temp_min_c']+profile['temp_max_c'])/2,
+        'humidity_pct':60,'door_open':False,'temp_min_c':profile['temp_min_c'],'temp_max_c':profile['temp_max_c']})
+
+
 def test_registered_truck_connects_and_its_message_reaches_the_router():
     r, got = listen()
     t = client("TRK-001")
     assert connects(t)
-    t.publish("devices/TRK-001/messages/events/", '{"truck_id":"TRK-001"}', qos=1).wait_for_publish(5)
+    body = payload("TRK-001")
+    t.publish("devices/TRK-001/messages/events/", body, qos=1).wait_for_publish(5)
     time.sleep(1)
-    assert "devices/TRK-001/messages/events/" in got
+    assert ("devices/TRK-001/messages/events/", body) in got
     t.disconnect(); r.disconnect()
 
 
@@ -61,9 +79,10 @@ def test_truck_cannot_publish_as_another_truck():  # FR-04
     r, got = listen()
     t = client("TRK-001")
     assert connects(t)
-    t.publish("devices/TRK-002/messages/events/", '{"truck_id":"TRK-002"}', qos=1)
+    body = payload("TRK-002")
+    t.publish("devices/TRK-002/messages/events/", body, qos=1)
     time.sleep(1.5)
-    assert "devices/TRK-002/messages/events/" not in got
+    assert ("devices/TRK-002/messages/events/", body) not in got
     t.disconnect(); r.disconnect()
 
 
@@ -78,11 +97,11 @@ def test_client_without_a_certificate_is_refused():  # FR-03, NFR-03
 def test_truck_cannot_read_other_trucks_data():
     got = []
     t = client("TRK-003")
-    t.on_message = lambda cl, u, m: got.append(m.topic)
+    t.on_message = lambda cl, u, m: got.append((m.topic, m.payload.decode()))
     assert connects(t)
     t.subscribe("devices/+/messages/events/", qos=1)
     other = client("TRK-001"); assert connects(other)
-    other.publish("devices/TRK-001/messages/events/", "{}", qos=1)
+    other.publish("devices/TRK-001/messages/events/", payload("TRK-001"), qos=1)
     time.sleep(1.5)
     assert got == []
     t.disconnect(); other.disconnect()

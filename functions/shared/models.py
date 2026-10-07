@@ -27,7 +27,7 @@ def utcnow() -> datetime:
 
 
 def iso(t: datetime) -> str:
-    return t.astimezone(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+    return t.astimezone(timezone.utc).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def parse(s: str) -> datetime:
@@ -48,6 +48,14 @@ class Alert:
     resolved_at: str | None = None
     email_sent_at: str | None = None
     email_seconds: float | None = None
+    email_status: str = "pending"
+    email_attempts: int = 0
+    email_next_attempt: str | None = None
+    email_claim: str | None = None
+    email_claim_until: str | None = None
+    email_error: str | None = None
+    email_accepted_at: str | None = None
+    email_workflow_id: str | None = None
 
     def to_doc(self) -> dict:
         return {**asdict(self), "doc_type": "alert"}

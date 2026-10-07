@@ -62,3 +62,12 @@ def test_health_panel_counts_messages_and_estimates_cost():  # F11
 def test_cost_estimate_for_a_24_7_fleet_matches_the_part_1_report():
     assert api.monthly_cost_usd(messages_per_day=8640 * 10) == 10.65   # 10 trucks 24/7 (Part 1, Appendix B)
     assert api.monthly_cost_usd(messages_per_day=6000) == 0.0          # course use inside the free tier
+
+
+def test_fault_panel_lists_every_truck_and_validates_choices():  # Azure: dashboard -> Fleet API -> trucks poll it
+    repo, _, _ = setup()
+    assert api.faults_view(repo) == {f"TRK-00{i}": "none" for i in range(1, 7)}
+    assert api.set_fault(repo, "TRK-002", {"scenario": "delay"}) == (200, {"truck_id": "TRK-002", "scenario": "delay"})
+    assert api.set_fault(repo, "TRK-999", {"scenario": "delay"})[0] == 404
+    assert api.set_fault(repo, "TRK-002", {"scenario": "explode"})[0] == 400
+    assert api.set_fault(repo, "TRK-002", {"scenario": "none"})[0] == 200 and api.faults_view(repo)["TRK-002"] == "none"
