@@ -65,6 +65,14 @@ bash scripts/deploy_azure_app.sh
 bash scripts/start_azure_trucks.sh          # stop: docker compose -f docker-compose.azure.yml down
 ```
 
+Check every feature on the live deployment (set the demo faults first – see the comments at the top of each script):
+
+```bash
+GREENOPS_URL=https://<static web app> GREENOPS_API=https://<function app>/api GREENOPS_OPERATOR_KEY=<key> \
+  node e2e/azure_live_check.cjs                    # F1–F12 in Chromium, the way a dispatcher uses it
+python e2e/azure_live_backend.py <resource-group> <iot-hub> <storage-account>   # F5 certificates, F6 archive
+```
+
 | Local stand-in | Azure (deployed) |
 |---|---|
 | Mosquitto + router | IoT Hub B1 (X.509 thumbprint per truck) + message routes to the Alert Function and Blob archive |

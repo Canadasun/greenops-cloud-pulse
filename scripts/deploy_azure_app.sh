@@ -14,6 +14,7 @@ cp -r contracts "$stage/contracts"
 (cd "$stage" && func azure functionapp publish "$FUNC_APP" --python)
 rm -rf "$stage"
 
-(cd dashboard && VITE_API_BASE="$FUNC_URL" npm run build)
-npx --yes @azure/static-web-apps-cli@2 deploy dashboard/dist --deployment-token "$($TF swa_deployment_token)" --env production
+# Separate output folder, so the local dist/ (used by the browser tests) is never an Azure build
+(cd dashboard && VITE_API_BASE="$FUNC_URL" npx vite build --outDir dist-azure --emptyOutDir)
+npx --yes @azure/static-web-apps-cli@2 deploy dashboard/dist-azure --deployment-token "$($TF swa_deployment_token)" --env production
 echo "Dashboard: $($TF dashboard_url)"
