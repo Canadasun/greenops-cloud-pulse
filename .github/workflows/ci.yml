@@ -33,7 +33,7 @@ jobs:
           docker run -d --name mosquitto -p 8883:8883 \
             -v $PWD/broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro \
             -v $PWD/broker/acl:/mosquitto/config/acl:ro -v $PWD/broker/certs/mosquitto:/mosquitto/certs:ro greenops-broker-ci
-          for i in $(seq 1 30); do docker logs mosquitto 2>&1 | grep -q "running" && break; sleep 1; done
+          for i in $(seq 1 30); do docker logs mosquitto 2>&1 | grep -qE "version [0-9.]+ running" && break; sleep 1; done
           docker logs mosquitto; docker ps -a --filter name=mosquitto --format '{{.Status}}'
           python -m pytest -v broker/tests
 
