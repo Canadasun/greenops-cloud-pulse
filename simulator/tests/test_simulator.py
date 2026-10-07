@@ -151,3 +151,13 @@ def test_next_trip_keeps_the_cargo_temperature_and_the_fault():
     nxt = truck.next_reading()
     assert truck.scenario == "compressor" and nxt["temp_c"] > last["temp_c"]
     assert nxt["lat"] != last["lat"] and nxt["scheduled_eta"] > last["scheduled_eta"]
+
+
+def test_accelerated_route_matches_reported_speed_and_scale():
+    truck, clock = make_truck(journey_s=600)
+    before = truck.progress
+    clock.advance(10)
+    msg = truck.next_reading()
+    map_kmh = (truck.progress - before) * truck.route.length_km / (10 / 3600)
+    assert msg['speed_kmh'] <= 120
+    assert map_kmh == pytest.approx(msg['speed_kmh'] * msg['simulation_time_scale'], abs=0.1)

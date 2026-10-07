@@ -1,0 +1,16 @@
+# Use with -p greenops-fix-tests and compose.e2e.yml. Separate ports and named volumes.
+services:
+  mosquitto:
+    ports: !override ["127.0.0.1:8983:8883"]
+  cosmos:
+    ports: !override ["127.0.0.1:8181:8081", "127.0.0.1:1235:1234"]
+  azurite:
+    ports: !override ["127.0.0.1:11000:10000"]
+  functions:
+    ports: !override ["127.0.0.1:7171:80"]
+  simulator:
+    ports: !override ["127.0.0.1:8190:8090"]
+  dashboard:
+    ports: !override ["127.0.0.1:5273:80"]
+  mailpit:
+    ports: !override ["127.0.0.1:8125:8025"]

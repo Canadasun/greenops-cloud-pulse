@@ -28,9 +28,10 @@ jobs:
       - name: Broker security tests (live Mosquitto with mutual TLS)
         run: |
           bash scripts/make_certs.sh
+          docker build -t greenops-broker-ci broker
           docker run -d --name mosquitto -p 8883:8883 \
             -v $PWD/broker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro \
-            -v $PWD/broker/acl:/mosquitto/config/acl:ro -v $PWD/broker/certs:/mosquitto/certs:ro eclipse-mosquitto:2
+            -v $PWD/broker/acl:/mosquitto/config/acl:ro -v $PWD/broker/certs/mosquitto:/mosquitto/certs:ro greenops-broker-ci
           sleep 3
           python -m pytest -v broker/tests
 
@@ -63,6 +64,11 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r ../functions/requirements-dev.txt
+      - run: npx playwright install --with-deps chromium
+      - run: GREENOPS_PYTHON=python npm run test:browser
 
   end-to-end:           # all roles – the whole system in Docker
     needs: [simulator, ingestion, functions, dashboard]
@@ -72,6 +78,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install -r e2e/requirements.txt
+      - run: python3 scripts/init_local.py
       - run: bash scripts/make_certs.sh
       - run: docker compose -f docker-compose.yml -f e2e/compose.e2e.yml up -d --build
       - run: python -m pytest -v e2e

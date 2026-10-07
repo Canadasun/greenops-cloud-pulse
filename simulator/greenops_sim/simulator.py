@@ -65,8 +65,10 @@ class TruckSimulator:
         self.progress = min(1.0, self.progress + factor * dt / self.journey_s)
         if self.arrived:
             return 0.0
-        normal_kmh = self.route.length_km / (self.journey_s / 3600)
-        return min(120.0, normal_kmh) * factor * self.rng.uniform(0.9, 1.05)
+        # journey_s is explicitly accelerated demo time. Physical sensor speed uses
+        # a matching time scale, without independent random noise or exceeding its cap.
+        normal_kmh = min(120.0, self.route.length_km / (self.journey_s / 3600))
+        return normal_kmh * factor
 
     def _sense(self):
         p = self.profile
@@ -97,4 +99,5 @@ class TruckSimulator:
             "temp_min_c": self.profile.temp_min_c,
             "temp_max_c": self.profile.temp_max_c,
             "scheduled_eta": _iso(self.scheduled_eta),
+            "simulation_time_scale": max(1.0, self.route.length_km / (self.journey_s / 3600) / 120.0),
         }

@@ -22,5 +22,5 @@ test('clicking Acknowledge sends the alert id and the user', async () => {
 
 test('shows a friendly message when there are no alerts', () => {
   render(<AlertHistory alerts={[]} onAcknowledge={() => {}} user="x" />);
-  expect(screen.getByText(/fleet is healthy/)).toBeInTheDocument();
+  expect(screen.getByText(/No incidents reported/)).toBeInTheDocument();
 });

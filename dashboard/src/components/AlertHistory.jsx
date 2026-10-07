@@ -1,40 +1,35 @@
-// Alert history with the Acknowledge action (F9, FR-11).
 import { useState } from 'react';
-import { ALERT_TITLES, clock } from '../status';
+import { ALERT_TITLES, timestamp } from '../status';
 
-export default function AlertHistory({ alerts, onAcknowledge, user }) {
-  const [busy, setBusy] = useState(null);
-  const [error, setError] = useState(null);
+export default function AlertHistory({ alerts, onAcknowledge, onSelect, canOperate = true, user }) {
+  const [busy, setBusy] = useState(new Set());
+  const [notice, setNotice] = useState(null);
   const ack = async (id) => {
-    setBusy(id); setError(null);
-    try { await onAcknowledge(id, user); } catch (e) { setError(e.message); } finally { setBusy(null); }
+    setBusy(s => new Set(s).add(id)); setNotice(null);
+    try {
+      await onAcknowledge(id, user);
+      setNotice({ text: 'Alert acknowledged. Monitoring continues.', error: false });
+    } catch (e) { setNotice({ text: e.message, error: true }); }
+    finally { setBusy(s => { const next = new Set(s); next.delete(id); return next; }); }
   };
-  if (!alerts) return <p className="muted">Loading alerts…</p>;
-  return (
-    <>
-      {error && <p className="error" role="alert">{error}</p>}
-      {alerts.length === 0 ? <p className="muted">No alerts yet – the fleet is healthy.</p> : (
-        <table className="alerts">
-          <thead><tr><th>Started</th><th>Truck</th><th>Problem</th><th>Details</th><th>Email</th><th>Status</th><th /></tr></thead>
-          <tbody>
-            {alerts.map((a) => (
-              <tr key={a.id} className={`row-${a.status.toLowerCase()}`}>
-                <td>{clock(a.started_at)}</td>
-                <td>{a.truck_id}</td>
-                <td>{ALERT_TITLES[a.type] || a.type}</td>
-                <td>{a.details}</td>
-                <td>{a.email_sent_at ? `sent in ${a.email_seconds ?? '?'} s` : 'not sent'}</td>
-                <td><span className={`pill pill-${a.status.toLowerCase()}`}>{a.status}</span>
-                  {a.acknowledged_by && <div className="muted small">by {a.acknowledged_by} at {clock(a.acknowledged_at)}</div>}</td>
-                <td>{a.status === 'ACTIVE' && (
-                  <button onClick={() => ack(a.id)} disabled={busy === a.id} aria-label={`Acknowledge ${a.truck_id} ${a.type}`}>
-                    {busy === a.id ? '…' : 'Acknowledge'}
-                  </button>)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </>
-  );
+  if (!alerts) return null;
+  return <>
+    {notice && <p className={notice.error ? 'error' : 'success'} role={notice.error ? 'alert' : 'status'}>{notice.text}</p>}
+    {!alerts.length ? <p className="empty">No incidents reported in this view.</p> : <div className="incident-list">
+      {alerts.map(a => <article key={a.id} className={`incident incident-${a.status.toLowerCase()}`} aria-label={`${a.truck_id} ${ALERT_TITLES[a.type] || a.type}`}>
+        <div className="incident-title"><div>
+          {onSelect ? <button className="text-button" onClick={() => onSelect(a.truck_id)}>{a.truck_id}</button> : <strong>{a.truck_id}</strong>}
+          <h3>{ALERT_TITLES[a.type] || a.type}</h3>
+        </div><span className={`pill pill-${a.status.toLowerCase()}`}>{a.status.toLowerCase()}</span></div>
+        <p>{a.details}</p>
+        <div className="incident-meta"><time dateTime={a.started_at}>{timestamp(a.started_at)}</time>
+          <span>Email: {a.email_sent_at ? 'sent' : a.email_status === 'accepted' ? 'queued with provider' : a.email_status === 'failed' ? 'failed · retry scheduled' : 'queued'}</span>
+        </div>
+        {a.acknowledged_by && <p className="small muted">Acknowledged by {a.acknowledged_by} · {timestamp(a.acknowledged_at)}</p>}
+        {a.status === 'ACTIVE' && <button onClick={() => ack(a.id)} disabled={!canOperate || busy.has(a.id)} aria-label={`Acknowledge ${a.truck_id} ${a.type}`}>
+          {busy.has(a.id) ? 'Acknowledging…' : 'Acknowledge'}
+        </button>}
+      </article>)}
+    </div>}
+  </>;
 }
