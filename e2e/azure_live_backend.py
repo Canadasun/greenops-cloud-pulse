@@ -47,8 +47,13 @@ devices = {d["deviceId"]: d for d in az("iot", "hub", "device-identity", "list",
 for t in TRUCKS:
     d = devices[t]
     assert d["authenticationType"] == "selfSigned", f"{t} is not using X.509 thumbprint authentication"
-    assert d["connectionState"] == "Connected", f"{t} is not connected"
 assert "TRK-099" not in devices
+# The registry's connectionState can lag for many minutes (Microsoft: "for development and debugging only"), so the
+# hub's own connectedDeviceCount metric is the reliable "are all trucks connected" signal.
+hub_id = az("iot", "hub", "show", "-n", HUB)["id"]
+counts = az("monitor", "metrics", "list", "--resource", hub_id, "--metric", "connectedDeviceCount", "--interval", "PT1M")
+recent = max((x.get("maximum") or x.get("average") or 0) for x in counts["value"][0]["timeseries"][0]["data"][-5:])  # newest minute fills late
+assert recent >= len(TRUCKS), f"IoT Hub reports {recent:.0f} connected devices in the last 5 minutes, expected 6"
 # Positive control: a registered truck's certificate is accepted by the same code (TRK-005 is "offline" in the demo,
 # so taking over its connection for a moment does not interrupt live data; the simulator reconnects by itself).
 assert iot_hub_accepts("TRK-005"), "registered device was refused – the check itself is broken"
