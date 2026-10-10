@@ -8,6 +8,7 @@ Environment variables (all optional):
   CONTROL_PORT            port of the fault-control API (default 8090)
   IOTHUB_HOSTNAME         set to <hub>.azure-devices.net to send to Azure IoT Hub instead of the local broker
   FAULTS_URL              on Azure: the Fleet API's /api/sim/trucks, polled for faults chosen on the dashboard
+  RUN_FOR_S               stop after this many seconds (the Azure Container Apps job); unset = run until stopped
 """
 import json
 import logging
@@ -195,6 +196,16 @@ class _Handler(BaseHTTPRequestHandler):
         return bool(token and hmac.compare_digest(self.headers.get("Authorization", ""), "Bearer " + token))
 
 
+def serve(server, run_for_s=None):
+    """Serves the fault API; with run_for_s it returns after that time so a cloud job run ends by itself."""
+    if run_for_s is None:
+        return server.serve_forever()
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    time.sleep(run_for_s)
+    server.shutdown()
+    log.info("run time of %ss is over; stopping the trucks", run_for_s)
+
+
 def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     cfg = {"host": os.getenv("MQTT_HOST", "mosquitto"), "port": int(os.getenv("MQTT_PORT", "8883")),
@@ -208,7 +219,8 @@ def main():
     if os.getenv("FAULTS_URL"):
         threading.Thread(target=poll_faults, args=(os.environ["FAULTS_URL"], faults, set(fleet)), daemon=True).start()
     log.info("started %d truck processes; fault API on port %s", len(procs), os.getenv("CONTROL_PORT", "8090"))
-    ControlServer(("0.0.0.0", int(os.getenv("CONTROL_PORT", "8090"))), faults, fleet.keys()).serve_forever()
+    run_for_s = float(os.environ["RUN_FOR_S"]) if os.getenv("RUN_FOR_S") else None
+    serve(ControlServer(("0.0.0.0", int(os.getenv("CONTROL_PORT", "8090"))), faults, fleet.keys()), run_for_s)
 
 
 if __name__ == "__main__":
