@@ -9,6 +9,12 @@ test('stale age advances without a successful API request', () => {
   rerender(<ClockContext.Provider value={start + 120000}><Freshness lastSeen="2026-10-10T00:00:00Z" /></ClockContext.Provider>);
   expect(screen.getByText('Stale · 2 min ago')).toBeInTheDocument();
 });
+test('a parked truck shows its last reading in plain text, not as stale', () => {
+  const start = Date.parse('2026-10-10T00:00:00Z');
+  const { container } = render(<ClockContext.Provider value={start + 120000}><Freshness lastSeen="2026-10-10T00:00:00Z" parked /></ClockContext.Provider>);
+  expect(screen.getByText('Parked · last reading 2 min ago')).toBeInTheDocument();
+  expect(container.querySelector('.freshness.stale')).toBeNull();
+});
 test('unknown conditions remain readable and malformed readings fail safely', () => {
   render(<StatusBadge status="new-status" />);
   expect(screen.getByText(/Unknown condition/)).toBeInTheDocument();

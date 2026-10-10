@@ -22,7 +22,7 @@ export default function OverviewPage({ trucks, open, change, inspect, acknowledg
         <AlertHistory compact alerts={active?.slice(0, 3)} onAcknowledge={acknowledge} canOperate={!!identity} onSelect={inspect} />
         <p className="small muted">Cargo breaches first, then offline, door and delay issues; oldest first within each group.</p>
       </section>
-      <section className="card" aria-label="Fleet snapshot"><div className="section-heading"><h2>Fleet snapshot</h2><button onClick={() => change({ view: 'fleet' })}>Open fleet</button></div><div className="truck-list">{list.map(t => <button className="truck-row" key={t.truck_id} onClick={e => inspect(t.truck_id, null, e.currentTarget)}><span><strong>{t.truck_id}</strong><small>{t.origin} → {t.destination}</small><Freshness lastSeen={t.last_seen} /></span><span><StatusBadge status={t.status} /><small>{temp(t.temp_c)}</small></span></button>)}</div>{trucks.data && !list.length && <p>No trucks registered.</p>}</section>
+      <section className="card" aria-label="Fleet snapshot"><div className="section-heading"><h2>Fleet snapshot</h2><button onClick={() => change({ view: 'fleet' })}>Open fleet</button></div><div className="truck-list">{list.map(t => <button className="truck-row" key={t.truck_id} onClick={e => inspect(t.truck_id, null, e.currentTarget)}><span><strong>{t.truck_id}</strong><small>{t.origin} → {t.destination}</small><Freshness lastSeen={t.last_seen} parked={t.status === 'parked'} /></span><span><StatusBadge status={t.status} /><small>{temp(t.temp_c)}</small></span></button>)}</div>{trucks.data && !list.length && <p>No trucks registered.</p>}</section>
     </div>
   </>;
 }
