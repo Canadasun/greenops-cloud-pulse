@@ -13,3 +13,4 @@ output "swa_deployment_token" {
   value     = azurerm_static_web_app.dashboard.api_key
   sensitive = true
 }
+output "truck_job" { value = azurerm_container_app_job.trucks.name }

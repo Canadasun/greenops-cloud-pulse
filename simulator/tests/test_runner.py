@@ -83,3 +83,23 @@ def test_remote_faults_update_only_known_trucks_and_valid_scenarios():
     faults = {}
     apply_remote_faults(faults, {"TRK-001": "door", "TRK-999": "door", "TRK-002": "explode"}, {"TRK-001", "TRK-002"})
     assert faults == {"TRK-001": "door"}
+
+
+# ---- Cloud run (Role 1 – Ying Song): the Azure job stops the trucks itself after RUN_FOR_S seconds
+from greenops_sim.runner import serve
+
+
+def test_serve_returns_after_run_for_s_so_the_cloud_job_ends_cleanly():
+    server = ControlServer(("127.0.0.1", 0), {}, valid_trucks={"TRK-001"})
+    done = threading.Event()
+    threading.Thread(target=lambda: (serve(server, run_for_s=0.3), done.set()), daemon=True).start()
+    assert done.wait(5), "serve() should return once the run time is over"
+
+
+def test_serve_without_run_time_keeps_running_until_shutdown():
+    server = ControlServer(("127.0.0.1", 0), {}, valid_trucks={"TRK-001"})
+    done = threading.Event()
+    threading.Thread(target=lambda: (serve(server, run_for_s=None), done.set()), daemon=True).start()
+    assert not done.wait(0.5)
+    server.shutdown()
+    assert done.wait(5)

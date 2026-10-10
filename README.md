@@ -48,8 +48,9 @@ Direct simulator control requires `Authorization: Bearer <SIM_CONTROL_TOKEN>`. F
 
 ## Run it on Azure
 
-The same code runs on the Azure services from the Part 2 design. The six trucks stay on a PC (they are the "edge"),
-and everything else is in Azure.
+The same code runs on the Azure services from the Part 2 design. The six trucks run as an Azure Container Apps job
+that any team member with Contributor on the resource group starts with **Run now**; each run stops itself after
+90 minutes (`truck_run_minutes`), which keeps two runs a day inside the IoT Hub F1 free quota of 8,000 messages.
 
 ```bash
 # 1. Infrastructure (Terraform, azurerm) – settings go in infra/terraform/azure.auto.tfvars (not committed),
@@ -61,8 +62,12 @@ terraform apply tfplan && cd ../..
 bash scripts/register_azure_devices.sh "$(terraform -chdir=infra/terraform output -raw iot_hub_name)"
 # 3. Publish the Functions and the dashboard
 bash scripts/deploy_azure_app.sh
-# 4. Start the trucks on this PC (they send to IoT Hub and read dashboard faults from the Fleet API)
-bash scripts/start_azure_trucks.sh          # stop: docker compose -f docker-compose.azure.yml down
+# 4. Copy the simulator code, reference data and truck certificates to the job's Azure Files share
+bash scripts/upload_truck_files.sh
+# 5. Start a 90-minute truck run (or portal: Container Apps job → Run now; stop early with az containerapp job stop)
+az containerapp job start -g "$(terraform -chdir=infra/terraform output -raw resource_group)" \
+  -n "$(terraform -chdir=infra/terraform output -raw truck_job)"
+# Fallback: run the trucks on a PC instead – bash scripts/start_azure_trucks.sh
 ```
 
 Check every feature on the live deployment (set the demo faults first – see the comments at the top of each script):
@@ -75,13 +80,14 @@ python e2e/azure_live_backend.py <resource-group> <iot-hub> <storage-account>   
 
 | Local stand-in | Azure (deployed) |
 |---|---|
-| Mosquitto + router | IoT Hub B1 (X.509 thumbprint per truck) + message routes to the Alert Function and Blob archive |
+| Mosquitto + router | IoT Hub F1, free (X.509 thumbprint per truck) + message routes to the Alert Function and Blob archive |
 | Functions container (HTTP trigger) | Function app, Flex Consumption, IoT Hub trigger, managed identity for Cosmos DB |
 | mail-relay + Mailpit | Logic App → Azure Communication Services email |
 | Cosmos DB emulator | Cosmos DB for NoSQL (free tier, or serverless when the free-tier slot is taken) |
 | Azurite | Storage account, `telemetry-archive` container, 30-day move to the Archive tier |
 | nginx | Static Web Apps (Free) – calls the Function app directly (CORS) |
 | simulator fault API | `/api/sim/trucks` on the Function app; the trucks poll it (`FAULTS_URL`) |
+| simulator container | Container Apps job (Consumption profile, manual trigger, 0.25 vCPU) running from an Azure Files share |
 
 ## Tests
 

@@ -20,7 +20,8 @@ resource "azurerm_iothub" "hub" {
     name     = var.iot_hub_sku
     capacity = 1
   }
-  tags = local.tags
+  event_hub_partition_count = var.iot_hub_sku == "F1" ? 2 : 4 # the free tier allows exactly 2
+  tags                      = local.tags
 }
 
 # ---- Storage (Role 4): Blob archive with a 30-day move to the Archive tier, plus storage for the Functions host
@@ -149,6 +150,7 @@ resource "azurerm_log_analytics_workspace" "logs" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
   retention_in_days   = 30
+  daily_quota_gb      = 0.5 # cost cap: logging pauses for the day instead of billing past the free allowance
   tags                = local.tags
 }
 
@@ -208,7 +210,7 @@ resource "azurerm_function_app_flex_consumption" "func" {
     IOT_HUB_MONTHLY_USD     = tostring(var.iot_hub_monthly_usd)
     FLEET_WATCHER_SCHEDULE  = "0 */1 * * * *"
     LOGIC_APP_URL           = azurerm_logic_app_trigger_http_request.alert.callback_url
-    ALERT_EMAIL_TO          = var.alert_email
+    ALERT_EMAIL_TO          = join(",", var.alert_emails)
   }
   tags = local.tags
 }
@@ -297,7 +299,7 @@ resource "azurerm_logic_app_action_custom" "send_email" {
       queries = { "api-version" = "2023-03-31" }
       body = {
         senderAddress = "DoNotReply@${azurerm_email_communication_service_domain.managed.from_sender_domain}"
-        recipients    = { to = [{ address = "@triggerBody()?['to']" }] }
+        recipients    = { to = [for e in var.alert_emails : { address = e }] }
         importance    = "High"
         content = {
           subject = "GreenOps alert: @{triggerBody()?['type']} on @{triggerBody()?['truck_id']}"

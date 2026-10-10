@@ -17,9 +17,13 @@ variable "iot_hub_sku" {
   type        = string
   default     = "B1"
 }
-variable "alert_email" {
-  description = "Mailbox that receives cold-chain alerts"
-  type        = string
+variable "alert_emails" {
+  description = "Mailboxes that receive cold-chain alerts (Role 3 owner + Role 5)"
+  type        = list(string)
+  validation {
+    condition     = length(var.alert_emails) > 0
+    error_message = "Give at least one alert recipient."
+  }
 }
 variable "budget_contact_emails" {
   description = "People who receive the USD 1 and USD 5 budget alerts (NFR-07)"
@@ -74,4 +78,9 @@ variable "iot_hub_monthly_usd" {
   description = "Configured base-cost assumption shown in the dashboard; not current pricing or a total bill forecast."
   type        = number
   default     = 10
+}
+variable "truck_run_minutes" {
+  description = "How long one cloud truck run lasts. 6 trucks x 6 readings/min x 90 min = 3,240 messages, so two runs a day fit the IoT Hub F1 limit of 8,000."
+  type        = number
+  default     = 90
 }
