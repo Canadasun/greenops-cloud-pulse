@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "scans": 41,
+  "checks": [
+    "operator gating, failed/successful connection, acknowledgement feedback/focus, brand preserves session",
+    "search replaces history, Back/Forward context, filter/selection consistency, inspector focus return",
+    "obsolete chart data cleared, keyboard chart inspection, raw readings",
+    "resolved pagination retained across inspection",
+    "32 responsive view states: overflow and axe, mobile keyboard inspection and return",
+    "simulation set/reset, partial outage, stale telemetry, 25 open incidents, co-located map trucks"
+  ],
+  "errors": []
+}

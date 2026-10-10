@@ -50,12 +50,42 @@ def routes_view():
     return {rid: {"origin": r["origin"], "destination": r["destination"], "waypoints": r["waypoints"]} for rid, r in fleet()["routes"].items()}
 
 
-def history_view(repo, truck_id, hours, now):
-    pts = repo.history(truck_id, now - timedelta(hours=hours))
+def history_view(repo, truck_id, hours, now, max_points=None, offset=0, limit=None):
+    start = now - timedelta(hours=hours)
+    pts = [p for p in repo.history(truck_id, start) if parse(p["timestamp"]) <= now]
     truck = next(t for t in fleet()["trucks"] if t["truck_id"] == truck_id)
     lim = cargo_profiles()[truck["cargo_type"]]
+    total = len(pts)
+    # Bucket first/last/min/max retain excursions; retain both sides of every outage.
+    # Outage boundaries can exceed the requested budget: correctness takes priority.
+    indices = list(range(total))
+    if max_points and total > max_points:
+        bucket_size = max(1, (total + max_points // 4 - 1) // (max_points // 4))
+        chosen = set()
+        for left in range(0, total, bucket_size):
+            right = min(left + bucket_size, total)
+            chunk = range(left, right)
+            chosen.update((left, right - 1, min(chunk, key=lambda i: pts[i]["temp_c"]), max(chunk, key=lambda i: pts[i]["temp_c"])))
+        for i in range(1, total):
+            if (parse(pts[i]["timestamp"]) - parse(pts[i - 1]["timestamp"])).total_seconds() > 90:
+                chosen.update((i - 1, i))
+        indices = sorted(chosen)
+    elif limit is not None:
+        indices = indices[offset:offset + limit]
+    points = []
+    previous = None
+    for i in indices:
+        p = pts[i]
+        point = {k: p[k] for k in ("timestamp", "temp_c", "humidity_pct", "door_open")}
+        if max_points:
+            point["contiguous"] = previous is not None and all(
+                (parse(pts[j]["timestamp"]) - parse(pts[j - 1]["timestamp"])).total_seconds() <= 90
+                for j in range(previous + 1, i + 1))
+        points.append(point)
+        previous = i
     return {"truck_id": truck_id, "hours": hours, "temp_min_c": lim.get("temp_min_c"), "temp_max_c": lim.get("temp_max_c"),
-            "points": [{"timestamp": p["timestamp"], "temp_c": p["temp_c"], "humidity_pct": p["humidity_pct"], "door_open": p["door_open"]} for p in pts]}
+            "window_start": iso(start), "window_end": iso(now), "total_points": total,
+            "points": points}
 
 
 def alerts_view(repo, limit=50, status=None):
