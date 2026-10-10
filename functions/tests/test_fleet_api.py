@@ -71,3 +71,28 @@ def test_fault_panel_lists_every_truck_and_validates_choices():  # Azure: dashbo
     assert api.set_fault(repo, "TRK-999", {"scenario": "delay"})[0] == 404
     assert api.set_fault(repo, "TRK-002", {"scenario": "explode"})[0] == 400
     assert api.set_fault(repo, "TRK-002", {"scenario": "none"})[0] == 200 and api.faults_view(repo)["TRK-002"] == "none"
+
+
+def test_sampled_history_preserves_extrema_and_outage_boundaries():
+    repo, _, _ = setup()
+    samples = [reading(t=T0 + timedelta(seconds=i * 10), temp=30 if i == 215 else -10 if i == 501 else 4) for i in range(8640) if not 4000 <= i <= 4020]
+    repo.save_readings(samples)
+    end = T0 + timedelta(hours=24)
+    result = api.history_view(repo, 'TRK-001', 24, end, max_points=1000)
+    assert result['total_points'] == len(samples)
+    assert len(result['points']) <= 1002
+    assert min(p['temp_c'] for p in result['points']) == -10
+    assert max(p['temp_c'] for p in result['points']) == 30
+    assert any(not p['contiguous'] for p in result['points'][1:])
+    assert result['window_end'] == api.iso(end)
+    pages = [api.history_view(repo, 'TRK-001', 24, end, offset=i, limit=100)['points'] for i in range(0, len(samples), 100)]
+    assert [p['timestamp'] for page in pages for p in page] == [p['timestamp'] for p in samples]
+
+
+def test_history_snapshot_excludes_newer_samples():
+    repo, _, _ = setup()
+    repo.save_readings([reading(t=T0), reading(t=T0 + timedelta(seconds=10))])
+    result = api.history_view(repo, 'TRK-001', 1, T0, limit=50)
+    assert result['total_points'] == 1
+    assert len(result['points']) == 1
+
