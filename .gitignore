@@ -22,3 +22,5 @@ test-results/
 *.tfstate
 *.tfstate.*
 *.tfvars
+*.tfplan
+infra/terraform/plan*.txt
