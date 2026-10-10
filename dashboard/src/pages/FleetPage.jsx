@@ -17,7 +17,7 @@ export default function FleetPage({ trucks, params, change, inspect }) {
     (!status || (status === 'attention' ? needsAttention(t) : status === 'unavailable' ? ['waiting', 'offline'].includes(t.status) : t.status === status)) &&
     (!cargo || t.cargo_type === cargo) && (!route || t.route_id === route) &&
     `${t.truck_id} ${t.origin} ${t.destination} ${CARGO[t.cargo_type] || t.cargo_type}`.toLowerCase().includes(search.toLowerCase())
-  ).sort((a, b) => (sort === 'condition' ? (['breach', 'offline', 'warning', 'waiting', 'normal', 'parked', 'parked'].indexOf(a.status) - ['breach', 'offline', 'warning', 'waiting', 'normal', 'parked', 'parked'].indexOf(b.status)) : 0) || a.truck_id.localeCompare(b.truck_id)), [trucks.data, status, search, cargo, route, sort]);
+  ).sort((a, b) => (sort === 'condition' ? (['breach', 'offline', 'warning', 'waiting', 'normal', 'parked'].indexOf(a.status) - ['breach', 'offline', 'warning', 'waiting', 'normal', 'parked'].indexOf(b.status)) : 0) || a.truck_id.localeCompare(b.truck_id)), [trucks.data, status, search, cargo, route, sort]);
   const filter = (values, options) => change({ ...values, truck: null, inspect: null }, options);
   return <>
     <div className="section-heading"><p className="muted">Select a truck to inspect its readings and incidents.</p><div className="segmented" role="group" aria-label="Fleet display"><button aria-pressed={mode !== 'map'} onClick={() => change({ view: 'fleet', mode: 'list' })}>List</button><button aria-pressed={mode === 'map'} onClick={() => change({ view: 'fleet', mode: 'map' })}>Map</button></div></div>
