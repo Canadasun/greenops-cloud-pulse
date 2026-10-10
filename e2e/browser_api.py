@@ -35,6 +35,13 @@ for truck in fleet()['trucks']:
              'temp_c':10 if truck['truck_id']=='TRK-001' else -20,'temp_min_c':profile['temp_min_c'],'temp_max_c':profile['temp_max_c'],
              'humidity_pct':60,'speed_kmh':80,'door_open':False,'scheduled_eta':iso(now+timedelta(hours=1))}
         process_batch([msg],repo,svc,now)
+# Realistic long-history fixture; the live fleet state remains the two latest readings.
+repo.save_readings([
+    {'truck_id': 'TRK-004', 'timestamp': iso(now - timedelta(seconds=seconds)),
+     'temp_c': -16 if seconds == 36000 else -24 if seconds == 42000 else -20,
+     'humidity_pct': 60, 'door_open': False}
+    for seconds in range(30, 86401, 10) if not 20000 <= seconds <= 20200
+])
 for i in range(25):
     repo.save_alert(Alert('TRK-001','DELAYED','Recovered',iso(now-timedelta(minutes=30+i)),iso(now),status='RESOLVED'))
 class Handler(BaseHTTPRequestHandler):

@@ -23,24 +23,27 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
   page.on('pageerror', (e) => errors.push(e.message));
   const truckCalls = [];
   page.on('request', (r) => { if (/\/api\/trucks$/.test(r.url())) truckCalls.push(Date.now()); });
-  // The Alerts button shows a count, e.g. "Alerts (5)", so match the start of the name.
-  const nav = (label) => page.getByRole('navigation', { name: 'Dashboard views' }).getByRole('button', { name: new RegExp('^' + label.replace(/[&()]/g, '\\$&')) }).click();
+  // Incident navigation includes an action count; match the start of the link name.
+  const nav = (label) => page.getByRole('navigation', { name: 'Dashboard views' }).getByRole('link', { name: new RegExp('^' + label.replace(/[&()]/g, '\\$&')) }).click();
   try {
     // ---- F7 simulated fleet + F1 live map
     await page.goto(url);
-    await page.locator('.connection').filter({ hasText: 'Fleet connected' }).waitFor({ timeout: 60000 });
+    await page.locator('.connection').filter({ hasText: 'Fleet API connected' }).waitFor({ timeout: 60000 });
     await page.locator('.truck-row').first().waitFor();
     assert.equal(await page.locator('.truck-row').count(), 6);
     const trucks = (await getJson('/trucks')).body;
     const live = trucks.filter((t) => t.seconds_ago !== undefined && t.seconds_ago <= 30).length;
     assert(live >= 5, `expected live trucks, got ${live}`);
     pass('F7', `6 simulated trucks listed; ${live} reported in the last 30 s through Azure IoT Hub`);
+    await page.screenshot({ path: path.join(out, 'overview.png'), fullPage: true });
+    await nav('Fleet');
+    await page.getByRole('button', { name: 'Map', exact: true }).click();
     await page.waitForFunction(() => [...document.querySelectorAll('img.leaflet-tile')].some((i) => i.complete && i.naturalWidth > 0), null, { timeout: 30000 });
     const status = Object.fromEntries(trucks.map((t) => [t.truck_id, t.status]));
     assert.equal(status['TRK-003'], 'breach'); assert.equal(status['TRK-002'], 'warning'); assert.equal(status['TRK-005'], 'offline');
     assert.equal(await page.locator('.leaflet-marker-icon').count() >= 5, true);
     pass('F1', 'live map with OpenStreetMap tiles and colour/letter markers: breach (TRK-003), warning (TRK-002), offline (TRK-005)');
-    await page.screenshot({ path: path.join(out, 'overview.png'), fullPage: true });
+    await page.screenshot({ path: path.join(out, 'map.png'), fullPage: true });
 
     // ---- NFR-02 refresh at least every 5 s
     truckCalls.length = 0; await page.waitForTimeout(16000);
@@ -49,7 +52,7 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
 
     // ---- F4 detail + chart, F10 thresholds per cargo type
     await page.locator('.truck-row').filter({ hasText: 'TRK-003' }).click();
-    await page.locator('.detail h3').filter({ hasText: 'TRK-003' }).waitFor();
+    await page.locator('.detail h2').filter({ hasText: 'TRK-003' }).waitFor();
     await page.locator('.chart').waitFor();
     assert((await page.locator('.breach-dot').count()) > 0, 'compressor fault should show readings outside the safe band');
     pass('F4', 'TRK-003 detail with one-hour chart; readings above the safe band are marked');
@@ -57,8 +60,9 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
     const detailText = await page.locator('.detail').innerText();
     assert(/2\D{1,6}8\s*°C/.test(detailText), 'vaccine truck should show the 2–8 °C range');
     const frozen = trucks.find((t) => t.cargo_type === 'frozen_food');
+    await page.getByRole('button', { name: /Back to fleet/ }).click();
     await page.locator('.truck-row').filter({ hasText: frozen.truck_id }).click();
-    await page.locator('.detail h3').filter({ hasText: frozen.truck_id }).waitFor();
+    await page.locator('.detail h2').filter({ hasText: frozen.truck_id }).waitFor();
     assert(/−?-?25\D{1,6}−?-?15\s*°C/.test(await page.locator('.detail').innerText()), 'frozen truck should show −25 to −15 °C');
     pass('F10', `cargo limits per type: vaccines 2–8 °C (TRK-003), frozen food −25 to −15 °C (${frozen.truck_id})`);
 
@@ -75,7 +79,7 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
     pass('F8', `offline alert (TRK-005, email ${off.email_seconds} s) and delayed alert (TRK-004, email ${late.email_seconds} s)`);
 
     // ---- F12 (partial): write actions need an operator key
-    await nav('Alerts');
+    await nav('Incidents');
     const ackName = 'Acknowledge TRK-003 TEMPERATURE';
     await page.getByRole('button', { name: ackName }).waitFor({ timeout: 30000 });
     assert.equal(await page.getByRole('button', { name: ackName }).isDisabled(), true, 'read-only viewers cannot acknowledge');
@@ -85,7 +89,7 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
     await page.getByLabel('Operator access key').fill(key);
     await page.getByRole('button', { name: 'Connect', exact: true }).click();
     const who = (await page.getByText(/^Operator: /).first().innerText()).trim();
-    pass('F12', `read-only without a key (button disabled, API 401); signed in as "${who.replace(/^Operator: /, '')}"`);
+    pass('F12', `read-only without a key (button disabled, API 401); operator connected as "${who.replace(/^Operator: /, '')}"`);
     await page.screenshot({ path: path.join(out, 'alerts_before.png'), fullPage: true });
 
     // ---- F9 alert history + acknowledge
@@ -98,7 +102,7 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
     await page.screenshot({ path: path.join(out, 'alerts_after.png'), fullPage: true });
 
     // ---- F7 faults on demand from the dashboard, F11 health and cost panel
-    await nav('System & demo');
+    await nav('System');
     const fault = page.getByLabel('Fault scenario for TRK-001');
     await fault.waitFor();
     await fault.selectOption('door');
@@ -114,8 +118,11 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
 
     // ---- responsive views, no browser errors
     await page.setViewportSize({ width: 390, height: 900 });
-    for (const [label, view] of [['Overview', 'overview'], ['Fleet', 'fleet'], ['Map', 'map'], ['Alerts', 'alerts'], ['System & demo', 'system']]) {
-      await nav(label); await page.waitForTimeout(500);
+    for (const [label, view] of [['Overview', 'overview'], ['Fleet', 'fleet'], ['Fleet', 'map'], ['Incidents', 'alerts'], ['System', 'system']]) {
+      await nav(label);
+      if (view === 'map') await page.getByRole('button', { name: 'Map', exact: true }).click();
+      if (view === 'fleet') await page.getByRole('button', { name: 'List', exact: true }).click();
+      await page.waitForTimeout(500);
       const scroll = await page.evaluate(() => document.documentElement.scrollWidth);
       assert(scroll <= 391, `${view} overflows 390px (${scroll}px)`);
       if (view === 'overview') await page.screenshot({ path: path.join(out, 'mobile.png'), fullPage: true });

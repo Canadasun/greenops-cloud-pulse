@@ -189,3 +189,42 @@ def test_email_failure_still_records_the_alert():
     process_batch([reading(temp=9)], repo, svc, now=T0)
     a = next(iter(repo.alerts.values()))
     assert a.status == "ACTIVE" and a.email_sent_at is None
+
+
+# ---- Planned end of a demo run (Role 3 – Shi Wang): a parked truck is not a breakdown
+def parked(**kw):
+    return {**reading(**kw), "parked": True}
+
+
+def test_parked_truck_is_not_flagged_offline_or_delayed_and_sends_no_email():
+    repo, notifier, svc = setup()
+    process_batch([reading(eta=T0 + timedelta(minutes=2))], repo, svc, now=T0)
+    process_batch([parked(t=T0 + timedelta(seconds=10), eta=T0 + timedelta(minutes=2))], repo, svc, now=T0 + timedelta(seconds=10))
+    for minute in range(1, 30):
+        check_fleet(repo, svc, now=T0 + timedelta(minutes=minute), offline_after_s=300)
+    assert [a for a in repo.alerts.values() if a.truck_id == "TRK-001"] == []
+    assert [a for a in notifier.sent if a.truck_id == "TRK-001"] == []
+
+
+def test_parking_closes_open_offline_and_delayed_alerts():
+    repo, notifier, svc = setup()
+    process_batch([reading(eta=T0 - timedelta(minutes=1))], repo, svc, now=T0)
+    check_fleet(repo, svc, now=T0, offline_after_s=300)
+    assert [a.type for a in repo.alerts.values()] == ["DELAYED"]
+    process_batch([parked(t=T0 + timedelta(seconds=10), eta=T0 - timedelta(minutes=1))], repo, svc, now=T0 + timedelta(seconds=10))
+    assert all(a.status == "RESOLVED" for a in repo.alerts.values())
+
+
+def test_a_new_run_unparks_the_truck_so_real_silence_is_offline_again():  # FR-08 still holds during a run
+    repo, notifier, svc = setup()
+    process_batch([parked()], repo, svc, now=T0)
+    restart = T0 + timedelta(hours=1)
+    process_batch([reading(t=restart, eta=restart + timedelta(hours=4))], repo, svc, now=restart)
+    check_fleet(repo, svc, now=restart + timedelta(minutes=6), offline_after_s=300)
+    assert [a.type for a in repo.alerts.values()] == ["OFFLINE"]
+
+
+def test_parked_flag_must_be_boolean():
+    repo, notifier, svc = setup()
+    process_batch([{**reading(), "parked": "yes"}], repo, svc, now=T0)
+    assert repo.latest_readings() == []

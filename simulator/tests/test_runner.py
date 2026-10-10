@@ -103,3 +103,34 @@ def test_serve_without_run_time_keeps_running_until_shutdown():
     assert not done.wait(0.5)
     server.shutdown()
     assert done.wait(5)
+
+
+# ---- Planned end of a cloud run (Role 1 – Ying Song): each truck reports "parked" so the stop is not a breakdown
+from greenops_sim.runner import park, run_truck
+
+
+def test_park_sends_one_final_reading_marked_parked_even_from_an_offline_truck():
+    truck = build_fleet(CONTRACTS)["TRK-005"]
+    truck.inject_fault("offline")
+    pub = FakePublisher()
+    park(truck, pub)
+    assert len(pub.sent) == 1
+    topic, msg = pub.sent[0]
+    assert topic == "devices/TRK-005/messages/events/" and msg["parked"] is True and msg["truck_id"] == "TRK-005"
+
+
+def test_run_truck_publishes_until_stopped_then_parks_last():
+    truck = build_fleet(CONTRACTS, journey_s=600)["TRK-001"]
+    pub, stop = FakePublisher(), threading.Event()
+    threading.Timer(0.2, stop.set).start()
+    run_truck(truck, {}, pub, interval=0.02, stop=stop)
+    readings = [m for _, m in pub.sent]
+    assert len(readings) >= 2 and readings[-1]["parked"] is True and not any(m.get("parked") for m in readings[:-1])
+
+
+def test_parked_reading_matches_the_telemetry_contract():
+    import jsonschema
+    truck = build_fleet(CONTRACTS)["TRK-003"]
+    pub = FakePublisher()
+    park(truck, pub)
+    jsonschema.validate(pub.sent[0][1], json.loads((CONTRACTS / "telemetry.schema.json").read_text()))

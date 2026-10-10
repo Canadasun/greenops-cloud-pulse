@@ -83,6 +83,10 @@
       "type": "number",
       "minimum": 1,
       "description": "Demo time acceleration: GPS speed equals reported physical speed multiplied by this factor."
+    },
+    "parked": {
+      "type": "boolean",
+      "description": "Only on the last reading of a planned run: the truck is parked, so the silence that follows is not a breakdown."
     }
   }
 }

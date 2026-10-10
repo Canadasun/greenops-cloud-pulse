@@ -42,7 +42,7 @@ docker compose up -d --build        # 2. start all 10 services
 docker compose down                 # stop
 ```
 
-Connect an operator key from `.env` in the dashboard, then open **System & demo**.
+Connect an operator key from `.env` in the dashboard, then open **System**.
 Direct simulator control requires `Authorization: Bearer <SIM_CONTROL_TOKEN>`. For example:
 `curl -X POST localhost:8090/trucks/TRK-003/fault -H 'Authorization: Bearer <SIM_CONTROL_TOKEN>' -H 'Content-Type: application/json' -d '{"scenario":"compressor"}'`
 
@@ -98,8 +98,8 @@ python e2e/azure_live_backend.py <resource-group> <iot-hub> <storage-account>   
 | Router | `cd broker/router && python -m pytest` | 11 |
 | Functions + storage contract | `cd functions && python -m pytest` (`COSMOS_ENDPOINT=http://localhost:8081` adds Cosmos integration cases) | 51 / 71 |
 | Mail relay | `cd mail-relay && python -m pytest` | 7 |
-| Dashboard | `cd dashboard && npm test` | 17 |
-| Browser regressions (dashboard in Chromium) | `cd dashboard && npm run build && npm run test:browser` | 6 scenarios, 15 views |
+| Dashboard | `cd dashboard && npm run typecheck && npm test` | API types + unit regressions |
+| Browser + accessibility regressions (Chromium) | `cd dashboard && npm run build && npm run test:browser` | Responsive views, keyboard/focus, axe, operator actions and outages |
 | **End to end** (whole system) | `docker compose -f docker-compose.yml -f e2e/compose.e2e.yml up -d --build && python -m pytest e2e` | 9 |
 
 GitHub Actions (`.github/workflows/ci.yml`) runs every suite on each push and pull request.
@@ -111,3 +111,5 @@ GitHub Actions (`.github/workflows/ci.yml`) runs every suite on each push and pu
 ## Audit remediation and upgrades
 
 See [the remediation and rollout notes](docs/audit-2026-10-07/FIXES.md) for authentication, persistence, coordinated API upgrades and test instructions. The audit findings and UI recommendations are preserved alongside that document.
+
+The frontend upgrade and accessibility validation are documented in [the October 10 implementation notes](docs/audit-2026-10-10/IMPLEMENTATION.md).
