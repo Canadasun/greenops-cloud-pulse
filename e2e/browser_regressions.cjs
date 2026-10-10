@@ -56,7 +56,8 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
     await page.getByText('Operator: Browser operator').waitFor();
     await page.getByRole('button', { name: 'Acknowledge TRK-001 TEMPERATURE' }).click();
     await page.getByRole('status').filter({ hasText: 'acknowledged' }).waitFor();
-    assert.equal(await page.evaluate(() => document.activeElement.className), 'action-feedback');
+    // Focus moves on the next animation frame after the message renders, so wait for it rather than sampling once.
+    await page.waitForFunction(() => document.activeElement?.className === 'action-feedback', null, { timeout: 5000 });
     await page.locator('.brand').click(); await page.getByText('Operator: Browser operator').waitFor();
     checks.push('operator gating, failed/successful connection, acknowledgement feedback/focus, brand preserves session');
     await page.getByRole('link', { name: 'Fleet', exact: true }).click();
