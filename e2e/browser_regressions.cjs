@@ -141,6 +141,8 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
     await goto('view=fleet');
     await page.locator('.truck-row').filter({ hasText: 'TRK-004' }).focus(); await page.keyboard.press('Enter'); await page.locator('.chart').waitFor();
     assert.equal(await page.evaluate(() => document.activeElement.tagName), 'H1');
+    // The heading takes focus so screen readers announce the new page, but it is not a control: no visible ring.
+    assert.equal(await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle), 'none', 'page heading shows a focus ring');
     await page.getByRole('button', { name: /Back to fleet/ }).click();
     await page.waitForFunction(() => document.activeElement.classList.contains('truck-row'));
     checks.push('32 responsive view states: overflow and axe, mobile keyboard inspection and return');
