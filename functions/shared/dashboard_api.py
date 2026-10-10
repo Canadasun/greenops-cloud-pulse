@@ -5,6 +5,7 @@ import json
 import os
 
 from .models import AlertType, iso, parse
+from .fleet_watcher import is_parked
 from .reference import fleet, cargo_profiles
 
 BREACH = {AlertType.TEMPERATURE.value, AlertType.HUMIDITY.value}
@@ -12,11 +13,13 @@ WARNING = {AlertType.DOOR_OPEN.value, AlertType.DELAYED.value}
 FREE_DAILY = 8000
 
 
-def _status(open_types, has_data):
+def _status(open_types, has_data, parked=False):
     if AlertType.OFFLINE.value in open_types:
         return "offline"
     if not has_data:
         return "waiting"
+    if parked:  # a planned end of a demo run, not a breakdown
+        return "parked"
     if open_types & BREACH:
         return "breach"
     if open_types & WARNING:
@@ -26,6 +29,7 @@ def _status(open_types, has_data):
 
 def trucks_view(repo, now):
     latest = {r["truck_id"]: r for r in repo.latest_readings()}
+    parked = {s["truck_id"] for s in repo.all_states() if is_parked(s)}
     open_by_truck = {}
     for a in repo.open_alerts():
         open_by_truck.setdefault(a.truck_id, set()).add(a.type)
@@ -36,7 +40,7 @@ def trucks_view(repo, now):
         route = data["routes"][t["route_id"]]
         types = open_by_truck.get(t["truck_id"], set())
         item = {"truck_id": t["truck_id"], "route_id": t["route_id"], "cargo_type": t["cargo_type"], "origin": route["origin"],
-                "destination": route["destination"], "status": _status(types, r is not None), "open_alerts": sorted(types)}
+                "destination": route["destination"], "status": _status(types, r is not None, t["truck_id"] in parked), "open_alerts": sorted(types)}
         item.update({k: cargo_profiles()[t["cargo_type"]][k] for k in ("temp_min_c", "temp_max_c")})
         if r:
             item.update({k: r[k] for k in ("lat", "lon", "speed_kmh", "temp_c", "humidity_pct", "door_open", "temp_min_c", "temp_max_c", "scheduled_eta")})

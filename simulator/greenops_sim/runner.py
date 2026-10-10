@@ -55,6 +55,29 @@ def tick(truck, publisher) -> bool:
     return True
 
 
+def park(truck, publisher):
+    """End of a planned run: one last reading marked parked, sent even by a truck in the "offline" scenario, so the
+    server treats the silence that follows as a stop, not a breakdown (no offline or delayed alerts)."""
+    msg = truck.next_reading()
+    msg["parked"] = True
+    publisher.publish(truck.topic, json.dumps(msg, separators=(",", ":")))
+
+
+def run_truck(truck, faults, publisher, interval, stop):
+    """Publish every interval until stop is set, then park."""
+    while not stop.is_set():
+        scenario = faults.get(truck.truck_id, "none")
+        if scenario != truck.scenario:
+            truck.inject_fault(scenario)
+            log.info("%s scenario -> %s", truck.truck_id, scenario)
+        if truck.arrived:  # start the next trip so the demo keeps running
+            truck.start_next_trip()
+        tick(truck, publisher)
+        stop.wait(interval)
+    park(truck, publisher)
+    log.info("%s parked", truck.truck_id)
+
+
 def iothub_settings(hostname, truck_id):
     """MQTT settings for Azure IoT Hub: the device signs in with its own certificate and this username,
     and the topic tells IoT Hub the body is UTF-8 JSON (so routing and the Blob archive keep it readable)."""
@@ -91,7 +114,14 @@ class MqttPublisher:
                 time.sleep(wait)
 
     def publish(self, topic, payload):
-        self.client.publish(topic + self.topic_suffix, payload, qos=1)
+        self.last = self.client.publish(topic + self.topic_suffix, payload, qos=1)
+
+    def close(self, timeout=10):
+        """Wait until the last message (the parked reading) is acknowledged, then disconnect."""
+        if getattr(self, "last", None) is not None:
+            self.last.wait_for_publish(timeout)
+        self.client.disconnect()
+        self.client.loop_stop()
 
 
 def apply_remote_faults(faults, remote, valid_trucks):
@@ -112,19 +142,12 @@ def poll_faults(url, faults, valid_trucks, every_s=3):
         time.sleep(every_s)
 
 
-def truck_process(truck, faults, cfg):
+def truck_process(truck, faults, cfg, stop):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
     pub = MqttPublisher(truck.truck_id, cfg["host"], cfg["port"], cfg["cert_dir"], cfg.get("iothub"))
     pub.connect()
-    while True:
-        scenario = faults.get(truck.truck_id, "none")
-        if scenario != truck.scenario:
-            truck.inject_fault(scenario)
-            log.info("%s scenario -> %s", truck.truck_id, scenario)
-        if truck.arrived:  # start the next trip so the demo keeps running
-            truck.start_next_trip()
-        tick(truck, pub)
-        time.sleep(cfg["interval"])
+    run_truck(truck, faults, pub, cfg["interval"], stop)
+    pub.close()
 
 
 class ControlServer(ThreadingHTTPServer):
@@ -212,8 +235,8 @@ def main():
            "cert_dir": os.getenv("CERT_DIR", "/certs"), "interval": float(os.getenv("INTERVAL_S", "10")),
            "iothub": os.getenv("IOTHUB_HOSTNAME") or None}
     fleet = build_fleet(os.getenv("CONTRACTS_DIR", "/contracts"), journey_s=int(os.getenv("JOURNEY_S", "3600")))
-    faults = mp.Manager().dict()
-    procs = [mp.Process(target=truck_process, args=(t, faults, cfg), name=t.truck_id, daemon=True) for t in fleet.values()]
+    faults, stop = mp.Manager().dict(), mp.Event()
+    procs = [mp.Process(target=truck_process, args=(t, faults, cfg, stop), name=t.truck_id, daemon=True) for t in fleet.values()]
     for p in procs:
         p.start()
     if os.getenv("FAULTS_URL"):
@@ -221,6 +244,9 @@ def main():
     log.info("started %d truck processes; fault API on port %s", len(procs), os.getenv("CONTROL_PORT", "8090"))
     run_for_s = float(os.environ["RUN_FOR_S"]) if os.getenv("RUN_FOR_S") else None
     serve(ControlServer(("0.0.0.0", int(os.getenv("CONTROL_PORT", "8090"))), faults, fleet.keys()), run_for_s)
+    stop.set()  # planned end of the run: every truck sends its parked reading before the job exits
+    for p in procs:
+        p.join(30)
 
 
 if __name__ == "__main__":

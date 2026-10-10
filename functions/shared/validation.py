@@ -58,4 +58,9 @@ def validate_reading(raw, now):
         if isinstance(scale, bool) or not isinstance(scale, (int, float)) or not math.isfinite(scale) or scale < 1:
             raise ValueError("invalid simulation_time_scale")
         msg["simulation_time_scale"] = scale
+    if "parked" in raw:
+        if not isinstance(raw["parked"], bool):
+            raise ValueError("parked must be boolean")
+        if raw["parked"]:
+            msg["parked"] = True
     return msg

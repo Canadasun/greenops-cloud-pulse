@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { api, usePolling } from '../api';
-import { STATUS, CARGO, temp } from '../status';
+import { STATUS, CARGO, needsAttention, temp } from '../status';
 import { StatusBadge, Freshness } from '../components/UI';
 import QueryState from '../components/QueryState';
 const FleetMap = lazy(() => import('../components/FleetMap'));
@@ -14,10 +14,10 @@ export default function FleetPage({ trucks, params, change, inspect }) {
   const cargo = params.get('cargo') || '', route = params.get('route') || '', sort = params.get('sort') || 'id';
   const mode = params.get('view') === 'map' ? 'map' : params.get('mode') || 'list';
   const visible = useMemo(() => list.filter(t =>
-    (!status || (status === 'attention' ? t.status !== 'normal' : status === 'unavailable' ? ['waiting', 'offline'].includes(t.status) : t.status === status)) &&
+    (!status || (status === 'attention' ? needsAttention(t) : status === 'unavailable' ? ['waiting', 'offline'].includes(t.status) : t.status === status)) &&
     (!cargo || t.cargo_type === cargo) && (!route || t.route_id === route) &&
     `${t.truck_id} ${t.origin} ${t.destination} ${CARGO[t.cargo_type] || t.cargo_type}`.toLowerCase().includes(search.toLowerCase())
-  ).sort((a, b) => (sort === 'condition' ? (['breach', 'offline', 'warning', 'waiting', 'normal'].indexOf(a.status) - ['breach', 'offline', 'warning', 'waiting', 'normal'].indexOf(b.status)) : 0) || a.truck_id.localeCompare(b.truck_id)), [trucks.data, status, search, cargo, route, sort]);
+  ).sort((a, b) => (sort === 'condition' ? (['breach', 'offline', 'warning', 'waiting', 'normal', 'parked'].indexOf(a.status) - ['breach', 'offline', 'warning', 'waiting', 'normal', 'parked'].indexOf(b.status)) : 0) || a.truck_id.localeCompare(b.truck_id)), [trucks.data, status, search, cargo, route, sort]);
   const filter = (values, options) => change({ ...values, truck: null, inspect: null }, options);
   return <>
     <div className="section-heading"><p className="muted">Select a truck to inspect its readings and incidents.</p><div className="segmented" aria-label="Fleet display"><button aria-pressed={mode !== 'map'} onClick={() => change({ view: 'fleet', mode: 'list' })}>List</button><button aria-pressed={mode === 'map'} onClick={() => change({ view: 'fleet', mode: 'map' })}>Map</button></div></div>

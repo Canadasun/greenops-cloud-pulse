@@ -6,6 +6,7 @@ export const STATUS = {
   breach: { label: 'Breach', letter: 'B', color: '#fde2e1', text: '#842029' },
   offline: { label: 'Offline', letter: 'O', color: '#e5e7eb', text: '#41413e' },
   waiting: { label: 'Waiting for data', letter: '…', color: '#f0f1ef', text: '#41413e' },
+  parked: { label: 'Parked', letter: 'P', color: '#e3ecf7', text: '#1e3a5f' }, // planned end of a demo run, not a fault
 };
 
 export const ALERT_TITLES = {
@@ -19,9 +20,14 @@ export const ALERT_TITLES = {
 export const CARGO = { vaccines: 'Vaccines', fresh_produce: 'Fresh produce', frozen_food: 'Frozen food' };
 
 export function countByStatus(trucks) {
-  const counts = { normal: 0, warning: 0, breach: 0, offline: 0, waiting: 0 };
+  const counts = { normal: 0, warning: 0, breach: 0, offline: 0, waiting: 0, parked: 0 };
   for (const t of trucks) counts[t.status] = (counts[t.status] || 0) + 1;
   return counts;
+}
+
+// Normal and parked trucks need nothing from a dispatcher; every other status does.
+export function needsAttention(t) {
+  return !['normal', 'parked'].includes(t.status);
 }
 
 export function ago(seconds) {
