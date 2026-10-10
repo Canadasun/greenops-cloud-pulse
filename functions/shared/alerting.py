@@ -64,6 +64,11 @@ def process_batch(messages, repo, alerts, now):
                 alerts.resolve_in(tx, "OFFLINE", now)
             if previous and previous["scheduled_eta"] != msg["scheduled_eta"]:
                 alerts.resolve_in(tx, "DELAYED", now)
+            # A planned end of run: the truck is parked, so the silence that follows is not a breakdown.
+            state["parked_at"] = msg["timestamp"] if msg.get("parked") else None
+            if msg.get("parked"):
+                alerts.resolve_in(tx, "OFFLINE", now)
+                alerts.resolve_in(tx, "DELAYED", now)
             return found
         created.extend(repo.mutate_truck(msg["truck_id"], apply))
     alerts.retry_notifications(now)

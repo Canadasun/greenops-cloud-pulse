@@ -2,13 +2,13 @@ import { useContext } from 'react';
 import { ClockContext, readingAge, prioritize, StatusBadge, Freshness } from '../components/UI';
 import AlertHistory from '../components/AlertHistory';
 import QueryState from '../components/QueryState';
-import { temp } from '../status';
+import { needsAttention, temp } from '../status';
 export default function OverviewPage({ trucks, open, change, inspect, acknowledge, identity }) {
   const now = useContext(ClockContext), list = trucks.data || [];
   const active = open.data ? prioritize(open.data.items.filter(a => a.status === 'ACTIVE')) : undefined;
   const reporting = list.filter(t => { const age = readingAge(t.last_seen, now); return age != null && age <= 90; }).length;
   const cards = [
-    ['Trucks needing attention', trucks.data ? list.filter(t => t.status !== 'normal').length : '—', 'Breach, warning, offline or waiting', () => change({ view: 'fleet', status: 'attention' })],
+    ['Trucks needing attention', trucks.data ? list.filter(needsAttention).length : '—', 'Breach, warning, offline or waiting', () => change({ view: 'fleet', status: 'attention' })],
     ['Needs acknowledgement', active?.length ?? '—', 'Open incidents needing action', () => change({ view: 'alerts', tab: 'active' })],
     ['Offline or waiting', trucks.data ? list.filter(t => ['offline', 'waiting'].includes(t.status)).length : '—', 'No current operating picture', () => change({ view: 'fleet', status: 'unavailable' })],
     ['Reporting trucks', trucks.data ? `${reporting} / ${list.length}` : '—', 'Reading received within 90 seconds', () => change({ view: 'fleet', status: null })],

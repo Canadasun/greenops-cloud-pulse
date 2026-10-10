@@ -96,3 +96,13 @@ def test_history_snapshot_excludes_newer_samples():
     assert result['total_points'] == 1
     assert len(result['points']) == 1
 
+
+def test_parked_truck_shows_as_parked_until_it_sends_again():
+    repo, _, svc = setup()
+    process_batch([{**reading(), "parked": True}], repo, svc, now=T0)
+    later = T0 + timedelta(minutes=30)
+    check_fleet(repo, svc, now=later, offline_after_s=300)
+    t = next(x for x in api.trucks_view(repo, now=later) if x["truck_id"] == "TRK-001")
+    assert t["status"] == "parked" and t["open_alerts"] == []
+    process_batch([reading(t=later)], repo, svc, now=later)
+    assert next(x for x in api.trucks_view(repo, now=later) if x["truck_id"] == "TRK-001")["status"] == "normal"
