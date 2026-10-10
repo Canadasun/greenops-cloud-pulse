@@ -84,9 +84,39 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
     assert.equal(await page.locator('.chart').count(), 0);
     await page.waitForTimeout(100); assert(release); release(); await page.locator('.chart').waitFor();
     await page.unroute('**/api/trucks/TRK-004/history?*');
+    const historyStart = Date.now();
+    await page.getByLabel('Window', { exact: true }).selectOption('24');
+    await page.locator('.chart').waitFor();
+    const historyRenderMs = Date.now() - historyStart;
+    assert(historyRenderMs < 5000, `24h history render took ${historyRenderMs}ms`);
+    assert(await page.locator('.temp-line').evaluateAll(nodes => nodes.reduce((n, node) => n + node.getAttribute('points').split(' ').length, 0)) <= 1002);
+    await page.getByText(/representative samples from/).waitFor();
+    checks.push(`24-hour history rendered in ${historyRenderMs} ms with bounded chart samples`);
     await page.getByRole('slider').focus(); const oldValue = await page.getByRole('slider').inputValue(); await page.keyboard.press('ArrowLeft');
     assert.notEqual(await page.getByRole('slider').inputValue(), oldValue);
     await page.getByText('View readings as a table', { exact: true }).click(); await page.locator('tbody tr').first().waitFor();
+    assert.equal(await page.locator('tbody tr').count(), 50);
+    const firstRaw = await page.locator('tbody tr').first().textContent();
+    await page.getByRole('button', { name: 'Next readings' }).click();
+    await page.waitForFunction(first => document.querySelector('tbody tr')?.textContent !== first && document.querySelectorAll('tbody tr').length === 50, firstRaw);
+    const colors = await page.evaluate(() => {
+      const style = selector => getComputedStyle(document.querySelector(selector));
+      return { label: style('.band-label').fill, safe: style('.safe-band').fill, gap: style('.missing-band').fill,
+        axis: style('.tick').fill, line: style('.temp-line').stroke, border: style('select').borderTopColor,
+        white: style('.detail-card').backgroundColor };
+    });
+    const contrast = (a, b) => {
+      const luminance = value => value.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => { const c = v / 255; return c <= .04045 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }).reduce((sum, value, i) => sum + value * [.2126, .7152, .0722][i], 0);
+      const [lo, hi] = [luminance(a), luminance(b)].sort((a, b) => a - b);
+      return (hi + .05) / (lo + .05);
+    };
+    const contrastChecks = [
+      ['safe-band label', colors.label, colors.safe, 4.5], ['gap label', colors.label, colors.gap, 4.5],
+      ['chart axis', colors.axis, colors.white, 4.5], ['chart line over gap', colors.line, colors.gap, 3],
+      ['input boundary', colors.border, colors.white, 3]
+    ].map(([name, foreground, background, minimum]) => ({ name, foreground, background, minimum, ratio: contrast(foreground, background) }));
+    contrastChecks.forEach(check => assert(check.ratio >= check.minimum, `${check.name}: contrast ${check.ratio}`));
+    fs.writeFileSync(path.join(artifacts, 'contrast.json'), JSON.stringify(contrastChecks, null, 2));
     await scan('truck detail with raw readings and keyboard chart');
     await page.screenshot({ path: path.join(artifacts, 'desktop-detail.png'), fullPage: true });
     checks.push('obsolete chart data cleared, keyboard chart inspection, raw readings');
@@ -99,10 +129,11 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
       await page.setViewportSize({ width, height: 900 });
       for (const query of ['view=overview', 'view=fleet', 'view=fleet&mode=map', 'view=alerts', 'view=alerts&tab=monitoring', 'view=alerts&tab=resolved', 'view=system', 'view=fleet&truck=TRK-001']) {
         await goto(query);
-        if (query.includes('mode=map')) await page.locator('.leaflet-container').waitFor();
+        if (query.includes('mode=map')) { await page.locator('.leaflet-container').waitFor(); await page.getByText(/Map tiles are unavailable/).waitFor(); }
         if (query.includes('truck=')) await page.locator('.chart').waitFor();
         if (query.includes('system')) await page.getByLabel('Fault scenario for TRK-001').waitFor();
         await scan(`${width}px ${query}`);
+        if ([1440, 390].includes(width) && query === 'view=fleet&mode=map') await page.screenshot({ path: path.join(artifacts, `map-${width}.png`), fullPage: true });
         if (width === 390 && query === 'view=overview') await page.screenshot({ path: path.join(artifacts, 'mobile-overview.png'), fullPage: true });
         if (width === 390 && query.includes('truck=')) await page.screenshot({ path: path.join(artifacts, 'mobile-detail.png'), fullPage: true });
       }
@@ -137,6 +168,30 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
     await goto('view=fleet&mode=map'); await page.getByText('2 trucks share this location. Choose a truck:').waitFor();
     await page.locator('.map-overlap').getByRole('button', { name: 'TRK-004' }).click(); await page.getByRole('button', { name: 'Inspect TRK-004', exact: true }).click(); await page.locator('.chart').waitFor();
     checks.push('simulation set/reset, partial outage, stale telemetry, 25 open incidents, co-located map trucks');
+    await page.route('**/api/trucks', route => route.fulfill({ json: [{}] }));
+    await page.goto(`${url}/?view=fleet`);
+    await page.getByRole('alert').filter({ hasText: 'unexpected data' }).waitFor();
+    await scan('malformed response recovery');
+    await page.unroute('**/api/trucks');
+    await page.getByRole('button', { name: 'Retry fleet', exact: true }).click();
+    await page.locator('.truck-row').first().waitFor();
+    await page.route('**/api/trucks', route => route.fulfill({ json: [] }));
+    await goto('view=fleet'); await page.getByText(/No trucks match/).waitFor();
+    await scan('empty fleet');
+    await page.unroute('**/api/trucks');
+    let releaseFleet;
+    await page.route('**/api/trucks', async route => { await new Promise(resolve => { releaseFleet = resolve; }); await route.fulfill({ json: fleetResponse }); });
+    await page.goto(`${url}/?view=overview`);
+    await page.getByText('Connecting to fleet API…').waitFor();
+    assert.equal(await page.locator('.metrics button').first().locator('strong').textContent(), '—');
+    await scan('loading fleet has unknown counts');
+    assert(releaseFleet); releaseFleet(); await page.locator('.connection').filter({ hasText: 'Fleet API connected' }).waitFor();
+    await page.unroute('**/api/trucks');
+    await page.setViewportSize({ width: 320, height: 900 });
+    await goto('view=overview');
+    await page.addStyleTag({ content: '* { line-height: 1.5 !important; letter-spacing: .12em !important; word-spacing: .16em !important } p { margin-bottom: 2em !important }' });
+    await scan('320px reflow with increased text spacing');
+    checks.push('malformed response recovery, empty/loading states and 320px text-spacing reflow');
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(artifacts, 'browser-results.json'), JSON.stringify({ passed: true, scans: scans.length, checks, errors }, null, 2));
     console.log(`Browser regressions passed; ${scans.length} axe scans have zero violations. Keyboard, focus, responsive, auth, incident, map and outage checks passed.`);

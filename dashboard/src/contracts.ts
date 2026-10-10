@@ -43,3 +43,31 @@ export function parseRoutes(value: unknown): Record<string, { waypoints: number[
   for (const value of Object.values(routes)) { const r = object(value); for (const point of array(r.waypoints)) { const p = array(point); if (p.length !== 2) invalid(); p.forEach(number); } }
   return routes as Record<string, { waypoints: number[][] }>;
 }
+export interface Health {
+  iot_hub_sku: string; messages_today: number; daily_allowance: number | null;
+  alerts_today: number; emails_today: number; avg_email_seconds: number;
+  projected_messages_per_day: number; estimated_monthly_cost_usd: number;
+  capacity_warning: boolean; cost_note: string;
+}
+export function parseHealth(value: unknown): Health {
+  const h = object(value);
+  for (const key of ['iot_hub_sku', 'cost_note']) string(h[key]);
+  for (const key of ['messages_today', 'alerts_today', 'emails_today', 'avg_email_seconds', 'projected_messages_per_day', 'estimated_monthly_cost_usd']) number(h[key]);
+  if (h.daily_allowance != null) number(h.daily_allowance);
+  if (typeof h.capacity_warning !== 'boolean') invalid();
+  return h as unknown as Health;
+}
+export function parseSession(value: unknown): { can_operate: boolean; user: string | null } {
+  const s = object(value);
+  if (typeof s.can_operate !== 'boolean') invalid();
+  if (s.can_operate) string(s.user);
+  return s as { can_operate: boolean; user: string | null };
+}
+export function parseFaults(value: unknown): Record<string, string> {
+  const faults = object(value);
+  for (const scenario of Object.values(faults)) if (!['none', 'compressor', 'door', 'delay', 'offline'].includes(string(scenario))) invalid();
+  return faults as Record<string, string>;
+}
+export function parseIncident(value: unknown): Incident {
+  return parseAlerts({ items: [value], next_cursor: null }).items[0];
+}

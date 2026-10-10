@@ -47,7 +47,7 @@
           },
           {
             "target": [
-              ".tick[y=\"262\"][x=\"48\"]"
+              ".tick[x=\"48\"][y=\"262\"]"
             ],
             "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
           },
@@ -56,6 +56,690 @@
               "text[x=\"1304\"]"
             ],
             "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              "tr:nth-child(13) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(13) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(13) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(14) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(14) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(14) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(15) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(15) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(15) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(16) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(16) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(16) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(17) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(17) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(17) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(18) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(18) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(18) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(19) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(19) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(19) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(20) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(20) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(20) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(21) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(21) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(21) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(22) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(22) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(22) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(23) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(23) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(23) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(24) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(24) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(24) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(25) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(25) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(25) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(26) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(26) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(26) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(27) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(27) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(27) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(28) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(28) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(28) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(29) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(29) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(29) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(30) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(30) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(30) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(31) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(31) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(31) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(32) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(32) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(32) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(33) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(33) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(33) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(34) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(34) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(34) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(35) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(35) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(35) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(36) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(36) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(36) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(37) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(37) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(37) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(38) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(38) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(38) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(39) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(39) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(39) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(40) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(40) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(40) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(41) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(41) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(41) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(42) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(42) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(42) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(43) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(43) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(43) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(44) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(44) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(44) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(45) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(45) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(45) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(46) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(46) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(46) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(47) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(47) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(47) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(48) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(48) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(48) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(49) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(49) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(49) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(50) > td:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(50) > td:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+          },
+          {
+            "target": [
+              "tr:nth-child(50) > td:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
           }
         ]
       }
@@ -64,19 +748,7 @@
   {
     "name": "resolved page 2",
     "violations": [],
-    "incomplete": [
-      {
-        "id": "aria-prohibited-attr",
-        "nodes": [
-          {
-            "target": [
-              ".segmented"
-            ],
-            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
-          }
-        ]
-      }
-    ]
+    "incomplete": []
   },
   {
     "name": "1440px view=overview",
@@ -86,79 +758,56 @@
   {
     "name": "1440px view=fleet",
     "violations": [],
-    "incomplete": [
-      {
-        "id": "aria-prohibited-attr",
-        "nodes": [
-          {
-            "target": [
-              ".segmented"
-            ],
-            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
-          }
-        ]
-      }
-    ]
+    "incomplete": []
   },
   {
     "name": "1440px view=fleet&mode=map",
     "violations": [],
     "incomplete": [
       {
-        "id": "aria-prohibited-attr",
-        "nodes": [
-          {
-            "target": [
-              ".segmented"
-            ],
-            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
-          },
-          {
-            "target": [
-              ".map-legend"
-            ],
-            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
-          }
-        ]
-      },
-      {
         "id": "color-contrast",
         "nodes": [
           {
             "target": [
-              ".truck-row:nth-child(1) > .inspect-cue[aria-hidden=\"true\"]"
+              ".truck-row:nth-child(1) > span:nth-child(2) > .truck-temp"
             ],
             "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
           },
           {
             "target": [
-              ".truck-row:nth-child(2) > .inspect-cue[aria-hidden=\"true\"]"
+              ".truck-row:nth-child(1) > span:nth-child(2) > small:nth-child(3)"
             ],
             "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
           },
           {
             "target": [
-              ".truck-row:nth-child(3) > .inspect-cue[aria-hidden=\"true\"]"
+              ".truck-row:nth-child(2) > span:nth-child(2) > small:nth-child(3)"
             ],
             "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
           },
           {
             "target": [
-              ".truck-row:nth-child(4) > .inspect-cue[aria-hidden=\"true\"]"
+              ".truck-row:nth-child(3) > span:nth-child(2) > small:nth-child(3)"
             ],
             "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
           },
           {
             "target": [
-              ".truck-row:nth-child(5) > .inspect-cue[aria-hidden=\"true\"]"
+              ".truck-row:nth-child(4) > span:nth-child(2) > .pill"
             ],
-            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
           },
           {
             "target": [
-              ".truck-row:nth-child(6) > .inspect-cue[aria-hidden=\"true\"]"
+              ".truck-row:nth-child(4) > span:nth-child(2) > small:nth-child(3)"
             ],
-            "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element"
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".truck-row:nth-child(5) > span:nth-child(2) > small:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
           },
           {
             "target": [
@@ -177,24 +826,6 @@
               ".leaflet-control-zoom-out > span[aria-hidden=\"true\"]"
             ],
             "summary": "Fix any of the following:\n  Element content contains only non-text characters"
-          },
-          {
-            "target": [
-              ".leaflet-control-attribution"
-            ],
-            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
-          },
-          {
-            "target": [
-              "a[href$=\"leafletjs.com\"]"
-            ],
-            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
-          },
-          {
-            "target": [
-              ".leaflet-control-attribution > a:nth-child(3)"
-            ],
-            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
           },
           {
             "target": [
@@ -239,53 +870,17 @@
   {
     "name": "1440px view=alerts",
     "violations": [],
-    "incomplete": [
-      {
-        "id": "aria-prohibited-attr",
-        "nodes": [
-          {
-            "target": [
-              ".segmented"
-            ],
-            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
-          }
-        ]
-      }
-    ]
+    "incomplete": []
   },
   {
     "name": "1440px view=alerts&tab=monitoring",
     "violations": [],
-    "incomplete": [
-      {
-        "id": "aria-prohibited-attr",
-        "nodes": [
-          {
-            "target": [
-              ".segmented"
-            ],
-            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
-          }
-        ]
-      }
-    ]
+    "incomplete": []
   },
   {
     "name": "1440px view=alerts&tab=resolved",
     "violations": [],
-    "incomplete": [
-      {
-        "id": "aria-prohibited-attr",
-        "nodes": [
-          {
-            "target": [
-              ".segmented"
-            ],
-            "summary": "Fix all of the following:\n  aria-label attribute is not well supported on a div with no valid role attribute."
-          }
-        ]
-      }
-    ]
+    "incomplete": []
   },
   {
     "name": "1440px view=system",
@@ -341,6 +936,527 @@
   },
   {
     "name": "768px view=overview",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "768px view=fleet",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "768px view=fleet&mode=map",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "target": [
+              ".map-card > h2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".map-card > .query-freshness.muted.small"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".map-card > .query-freshness.muted.small > time[datetime=\"2026-10-10T22:24:45.670Z\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".query-error"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              "div[title=\"TRK-001 – Breach\"] > .marker"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "target": [
+              ".leaflet-control-zoom-out > span[aria-hidden=\"true\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element content contains only non-text characters"
+          },
+          {
+            "target": [
+              ".map-legend > .pill:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(5)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(6)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".map-overlap > .small"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".map-overlap > button:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".map-overlap > button:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "768px view=alerts",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "768px view=alerts&tab=monitoring",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "768px view=alerts&tab=resolved",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "768px view=system",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "768px view=fleet&truck=TRK-001",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "target": [
+              ".band-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              "text[y=\"236\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              "text[y=\"132\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              "text[y=\"28\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              ".tick[y=\"262\"][x=\"48\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              "text[x=\"632\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "390px view=overview",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "390px view=fleet",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "390px view=fleet&mode=map",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "target": [
+              ".map-card > h2"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".map-card > .query-freshness.muted.small"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              "time[datetime=\"2026-10-10T22:24:51.981Z\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".query-error"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              "div[title=\"TRK-001 – Breach\"] > .marker"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "target": [
+              ".leaflet-control-zoom-out > span[aria-hidden=\"true\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element content contains only non-text characters"
+          },
+          {
+            "target": [
+              ".leaflet-control-attribution"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it partially overlaps other elements"
+          },
+          {
+            "target": [
+              ".map-legend > .pill:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(5)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "390px view=alerts",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "390px view=alerts&tab=monitoring",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "390px view=alerts&tab=resolved",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "390px view=system",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "390px view=fleet&truck=TRK-001",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "target": [
+              ".band-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              "text[y=\"236\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              "text[y=\"132\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              "text[y=\"28\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              ".tick[y=\"262\"][x=\"48\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              "text[x=\"306\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "320px view=overview",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "320px view=fleet",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "320px view=fleet&mode=map",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "target": [
+              ".query-error"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              "div[title=\"TRK-001 – Breach\"] > .marker"
+            ],
+            "summary": "Fix any of the following:\n  Element content is too short to determine if it is actual text content"
+          },
+          {
+            "target": [
+              ".leaflet-control-zoom-out > span[aria-hidden=\"true\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element content contains only non-text characters"
+          },
+          {
+            "target": [
+              ".map-legend > .pill:nth-child(1)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(2)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(3)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(4)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(5)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".pill:nth-child(6)"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              ".map-overlap > .small"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "320px view=alerts",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "320px view=alerts&tab=monitoring",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "320px view=alerts&tab=resolved",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "320px view=system",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "320px view=fleet&truck=TRK-001",
+    "violations": [],
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": [
+          {
+            "target": [
+              ".band-label"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because it is overlapped by another element"
+          },
+          {
+            "target": [
+              "text[y=\"236\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              "text[y=\"132\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              "text[y=\"28\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              ".tick[y=\"262\"][x=\"48\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          },
+          {
+            "target": [
+              "text[x=\"238\"]"
+            ],
+            "summary": "Fix any of the following:\n  Element's background color could not be determined because element contains an image node"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "operator simulation changed",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "partial outage",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "stale telemetry despite successful API",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "25 open incidents",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "malformed response recovery",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "empty fleet",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "loading fleet has unknown counts",
+    "violations": [],
+    "incomplete": []
+  },
+  {
+    "name": "320px reflow with increased text spacing",
     "violations": [],
     "incomplete": []
   }
