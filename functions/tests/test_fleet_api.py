@@ -106,3 +106,18 @@ def test_parked_truck_shows_as_parked_until_it_sends_again():
     assert t["status"] == "parked" and t["open_alerts"] == []
     process_batch([reading(t=later)], repo, svc, now=later)
     assert next(x for x in api.trucks_view(repo, now=later) if x["truck_id"] == "TRK-001")["status"] == "normal"
+
+
+def test_http_history_rejects_invalid_sampling_and_page_parameters():
+    import azure.functions as func
+    import function_app as app
+    cases = [
+        {'limit': '0'}, {'limit': '101'}, {'max_points': '99'},
+        {'max_points': '2001'}, {'max_points': 'NaN'}, {'offset': '-1'},
+        {'end': '2026-01-01'}, {'end': '2999-01-01T00:00:00Z'},
+        {'max_points': '100', 'limit': '50'},
+    ]
+    for params in cases:
+        request = func.HttpRequest('GET', 'http://local/api/trucks/TRK-001/history', params=params,
+                                   route_params={'truck_id': 'TRK-001'}, body=b'')
+        assert app.get_history(request).status_code == 400, params

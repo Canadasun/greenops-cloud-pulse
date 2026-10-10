@@ -1,13 +1,15 @@
 {
   "passed": true,
-  "scans": 41,
+  "scans": 45,
   "checks": [
     "operator gating, failed/successful connection, acknowledgement feedback/focus, brand preserves session",
     "search replaces history, Back/Forward context, filter/selection consistency, inspector focus return",
+    "24-hour history rendered in 88 ms with bounded chart samples",
     "obsolete chart data cleared, keyboard chart inspection, raw readings",
     "resolved pagination retained across inspection",
     "32 responsive view states: overflow and axe, mobile keyboard inspection and return",
-    "simulation set/reset, partial outage, stale telemetry, 25 open incidents, co-located map trucks"
+    "simulation set/reset, partial outage, stale telemetry, 25 open incidents, co-located map trucks",
+    "malformed response recovery, empty/loading states and 320px text-spacing reflow"
   ],
   "errors": []
 }

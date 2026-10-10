@@ -39,8 +39,9 @@ export default function TempChart({ points, min, max, hours = 1, start, end, tot
     while (left < right) { const mid = Math.floor((left + right) / 2); if (times[mid] < at) left = mid + 1; else right = mid; }
     setFocused(left > 0 && Math.abs(times[left - 1] - at) < Math.abs(times[left] - at) ? left - 1 : left);
   }}>
-    <rect x={M.l} y={y(max)} width={W - M.l - M.r} height={y(min) - y(max)} className="safe-band" /><text x={M.l + 6} y={y(max) + 16} className="band-label">safe {min}–{max} °C</text>
+    <rect x={M.l} y={y(max)} width={W - M.l - M.r} height={y(min) - y(max)} className="safe-band" />
     {gaps.map(([a, b], i) => <rect key={i} x={x(a)} y={M.t} width={Math.max(0, x(b) - x(a))} height={H - M.t - M.b} className="missing-band" />)}
+    <text x={M.l + 6} y={y(max) + 16} className="band-label">safe {min}–{max} °C</text>
     {[lo, (lo + hi) / 2, hi].map((v, i) => <g key={i}><line x1={M.l} x2={W - M.r} y1={y(v)} y2={y(v)} className="grid" /><text x={M.l - 8} y={y(v) + 4} textAnchor="end" className="tick">{v.toFixed(0)}°</text></g>)}
     {groups.map((group, i) => <polyline key={i} points={group.map(p => `${x(Date.parse(p.timestamp)).toFixed(1)},${y(p.temp_c).toFixed(1)}`).join(' ')} className="temp-line" />)}
     {points.filter(p => p.temp_c < min || p.temp_c > max).map(p => <circle key={p.timestamp} cx={x(Date.parse(p.timestamp))} cy={y(p.temp_c)} r="3" className="breach-dot" />)}

@@ -36,5 +36,5 @@ export default function FleetMap({ trucks, routes, selected, onSelect }) {
       <Tooltip>{t.truck_id} · {(STATUS[t.status]?.label || 'Unknown condition')} · {temp(t.temp_c)}</Tooltip>
     </Marker>)}
     <Controls trucks={visible} selected={selected} />
-  </MapContainer><div className="map-legend" aria-label="Map condition legend">{Object.keys(STATUS).map(status => <StatusBadge key={status} status={status} />)}</div>{[...groups.values()].filter(group => group.length > 1).map(group => <div className="map-overlap" key={group[0].truck_id}><p className="small">{group.length} trucks share this location. Choose a truck:</p>{group.map(t => <button key={t.truck_id} onClick={e => onSelect(t.truck_id, null, e.currentTarget)}>{t.truck_id}</button>)}</div>)}</>;
+  </MapContainer><div className="map-legend" role="group" aria-label="Map condition legend">{Object.keys(STATUS).map(status => <StatusBadge key={status} status={status} />)}</div>{[...groups.values()].filter(group => group.length > 1).map(group => <div className="map-overlap" key={group[0].truck_id}><p className="small">{group.length} trucks share this location. Choose a truck:</p>{group.map(t => <button key={t.truck_id} onClick={e => onSelect(t.truck_id, null, e.currentTarget)}>{t.truck_id}</button>)}</div>)}</>;
 }

@@ -1,4 +1,4 @@
-import { parseTrucks, parseHistory, parseAlerts, parseRoutes } from './contracts';
+import { parseTrucks, parseHistory, parseAlerts, parseRoutes, parseHealth, parseSession, parseFaults, parseIncident } from './contracts';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function endpoints(apiBase = '') {
@@ -38,10 +38,10 @@ export const api = {
   history: (id, hours = 1, opts) => request(`${API}/trucks/${encodeURIComponent(id)}/history?hours=${hours}&max_points=1000`, opts).then(parseHistory),
   rawHistory: (id, hours, end, offset, opts) => request(`${API}/trucks/${encodeURIComponent(id)}/history?${query({ hours, end, offset, limit: 50 })}`, opts).then(parseHistory),
   alerts: (filters = {}, opts) => request(`${API}/alerts?${query({ limit: 20, ...filters })}`, opts).then(parseAlerts),
-  health: (opts) => request(`${API}/health`, opts),
-  session: (opts) => request(`${API}/session`, opts),
-  acknowledge: (id) => request(`${API}/alerts/${encodeURIComponent(id)}/ack`, { method: 'POST', body: '{}' }),
-  faults: (opts) => request(`${SIM}/trucks`, opts),
+  health: (opts) => request(`${API}/health`, opts).then(parseHealth),
+  session: (opts) => request(`${API}/session`, opts).then(parseSession),
+  acknowledge: (id) => request(`${API}/alerts/${encodeURIComponent(id)}/ack`, { method: 'POST', body: '{}' }).then(parseIncident),
+  faults: (opts) => request(`${SIM}/trucks`, opts).then(parseFaults),
   setFault: (id, scenario) => request(`${SIM}/trucks/${encodeURIComponent(id)}/fault`, {
     method: scenario === 'none' ? 'DELETE' : 'POST',
     ...(scenario !== 'none' ? { body: JSON.stringify({ scenario }) } : {}),
@@ -73,7 +73,7 @@ export function usePolling(fn, ms, deps = [], enabled = true) {
         failures++;
         if (alive) setState(s => ({ ...s, key, error: e.message, loading: false }));
       } finally {
-        if (alive) timer = setTimeout(run, Math.max(0, Math.min(60000, ms * 2 ** Math.min(failures, 4)) - (Date.now() - started))); // NFR-02: every ms, start to start
+        if (alive) timer = setTimeout(run, Math.max(0, Math.min(Math.max(60000, ms), ms * 2 ** Math.min(failures, 4)) - (Date.now() - started))); // NFR-02: every ms, start to start
       }
     };
     const resume = () => { if (!document.hidden) refresh(); };
