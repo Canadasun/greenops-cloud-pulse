@@ -1,0 +1,37 @@
+[
+  {
+    "name": "safe-band label",
+    "foreground": "rgb(15, 81, 50)",
+    "background": "rgb(220, 242, 230)",
+    "minimum": 4.5,
+    "ratio": 7.973202785860395
+  },
+  {
+    "name": "gap label",
+    "foreground": "rgb(15, 81, 50)",
+    "background": "rgb(224, 227, 230)",
+    "minimum": 4.5,
+    "ratio": 7.265825661180093
+  },
+  {
+    "name": "chart axis",
+    "foreground": "rgb(64, 84, 74)",
+    "background": "rgb(255, 255, 255)",
+    "minimum": 4.5,
+    "ratio": 8.123760554367044
+  },
+  {
+    "name": "chart line over gap",
+    "foreground": "rgb(36, 106, 165)",
+    "background": "rgb(224, 227, 230)",
+    "minimum": 3,
+    "ratio": 4.429334113866465
+  },
+  {
+    "name": "input boundary",
+    "foreground": "rgb(115, 136, 123)",
+    "background": "rgb(255, 255, 255)",
+    "minimum": 3,
+    "ratio": 3.7929117608131073
+  }
+]

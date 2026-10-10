@@ -8,8 +8,8 @@ const alerts = [
 
 test('lists alerts with readable titles and only ACTIVE ones can be acknowledged', () => {
   render(<AlertHistory alerts={alerts} onAcknowledge={() => {}} user="Dispatcher" />);
-  expect(screen.getByText('Temperature breach')).toBeInTheDocument();
-  expect(screen.getByText('Door left open')).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /Temperature breach/ })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: /Door left open/ })).toBeInTheDocument();
   expect(screen.getAllByRole('button', { name: /Acknowledge/ })).toHaveLength(1);
 });
 

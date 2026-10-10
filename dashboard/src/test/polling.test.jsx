@@ -51,3 +51,25 @@ test('a slow request still refreshes every 5 s, start to start (NFR-02)', async 
   await act(async () => { await vi.advanceTimersByTimeAsync(10100); });
   expect(fn).toHaveBeenCalledTimes(3); // starts at 0 s, 5 s and 10 s – not 0, 6.5 and 13 s
 });
+
+test('slow-changing queries keep their configured interval rather than polling every minute', async () => {
+  vi.useFakeTimers();
+  const fn = vi.fn().mockResolvedValue('routes');
+  renderHook(() => usePolling(fn, 600000));
+  await act(async () => { await vi.advanceTimersByTimeAsync(599999); });
+  expect(fn).toHaveBeenCalledTimes(1);
+  await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+  expect(fn).toHaveBeenCalledTimes(2);
+});
+
+test('hidden tabs suspend new requests and resume immediately when visible', async () => {
+  vi.useFakeTimers();
+  const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+  const fn = vi.fn().mockResolvedValue('ok');
+  renderHook(() => usePolling(fn, 5000));
+  await act(async () => { await vi.advanceTimersByTimeAsync(15000); });
+  expect(fn).not.toHaveBeenCalled();
+  hidden.mockReturnValue(false);
+  await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+  expect(fn).toHaveBeenCalledTimes(1);
+});

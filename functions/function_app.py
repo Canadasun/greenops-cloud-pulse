@@ -100,7 +100,22 @@ def get_history(req: func.HttpRequest) -> func.HttpResponse:
         return _json({"error": "hours must be a number from 0.1 to 24"}, 400)
     if req.route_params["truck_id"] not in api.truck_ids():
         return _json({"error": "unknown truck"}, 404)
-    return _json(api.history_view(repo(), req.route_params["truck_id"], hours, utcnow()))
+    try:
+        max_points = int(req.params["max_points"]) if "max_points" in req.params else None
+        offset = int(req.params.get("offset", "0"))
+        limit = int(req.params["limit"]) if "limit" in req.params else None
+        end = api.parse(req.params["end"]) if "end" in req.params else utcnow()
+        if end.tzinfo is None or end > utcnow() or offset < 0 or offset > 1000000:
+            raise ValueError()
+        if max_points is not None and not 100 <= max_points <= 2000:
+            raise ValueError()
+        if limit is not None and not 1 <= limit <= 100:
+            raise ValueError()
+        if max_points is not None and limit is not None:
+            raise ValueError()
+    except (ValueError, TypeError):
+        return _json({"error": "invalid history window, sample budget or page"}, 400)
+    return _json(api.history_view(repo(), req.route_params["truck_id"], hours, end, max_points, offset, limit))
 
 
 @app.route(route="alerts", methods=["GET"])
