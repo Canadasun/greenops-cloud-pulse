@@ -9,7 +9,7 @@ from shared.alert_service import AlertService
 from shared.alerting import process_batch
 from shared.fleet_watcher import check_fleet
 from shared.repository import InMemoryFleetRepository, CosmosFleetRepository
-from shared.models import Alert, iso
+from shared.models import Alert, iso, parse
 from shared import dashboard_api as api
 from test_alerting import reading, T0, FakeNotifier
 
@@ -185,3 +185,83 @@ def test_cosmos_health_aggregates_match_saved_incidents(store):
     process_batch([reading(temp=10)],store,svc,T0)
     stats=store.alert_stats(T0)
     assert stats['alerts_today']==1 and stats['emails_today']==1
+
+
+def test_failed_workflow_callbacks_back_off_and_then_stop(store):
+    """A provider that keeps refusing (e.g. email throttling) must not be retried every minute forever."""
+    class Accepted:
+        calls = 0
+        def send(self, a):
+            self.calls += 1
+            return {'status': 'accepted'}
+    n = Accepted(); svc = AlertService(store, n)
+    a, _ = svc.raise_or_update('TRK-001', 'DELAYED', 'late', T0)
+    now = T0
+    waits = []
+    for _ in range(20):
+        svc.claim_workflow(a.id, f'run-{n.calls}')
+        svc.delivery_result(a.id, 'failed', now, f'run-{n.calls}')
+        current = store.get_alert(a.id)
+        if current.email_status == 'abandoned':
+            break
+        waits.append((parse(current.email_next_attempt) - now).total_seconds())
+        now = parse(current.email_next_attempt)
+        svc.retry_notifications(now)
+    assert store.get_alert(a.id).email_status == 'abandoned'
+    assert n.calls == AlertService.MAX_EMAIL_ATTEMPTS
+    assert waits == sorted(waits) and waits[-1] > waits[0]  # exponential, not a fixed minute
+    svc.retry_notifications(now + timedelta(days=1))
+    assert n.calls == AlertService.MAX_EMAIL_ATTEMPTS
+
+
+def test_direct_send_failures_stop_after_the_attempt_limit(store):
+    class Down:
+        calls = 0
+        def send(self, a):
+            self.calls += 1
+            raise ConnectionError('HTTP 429')
+    n = Down(); svc = AlertService(store, n)
+    a, _ = svc.raise_or_update('TRK-001', 'TEMPERATURE', 'hot', T0)
+    for minute in range(1, 24 * 60, 5):
+        svc.retry_notifications(T0 + timedelta(minutes=minute))
+    assert n.calls == AlertService.MAX_EMAIL_ATTEMPTS
+    assert store.get_alert(a.id).email_status == 'abandoned'
+
+
+def test_legacy_alert_past_the_limit_is_abandoned_without_sending(store):
+    n = FakeNotifier(); svc = AlertService(store, n)
+    alert = Alert('TRK-001', 'DELAYED', 'late', iso(T0), iso(T0), email_status='failed', email_attempts=400)
+    store.save_alert(alert)
+    svc.retry_notifications(T0)
+    assert not n.sent and store.get_alert(alert.id).email_status == 'abandoned'
+
+
+def test_idle_fleet_check_does_not_rewrite_unchanged_state(store):
+    svc = AlertService(store, FakeNotifier())
+    process_batch([reading()], store, svc, T0)
+    check_fleet(store, svc, T0 + timedelta(seconds=30))
+    writes = []
+    original = store.save_state if isinstance(store, InMemoryFleetRepository) else None
+    if isinstance(store, InMemoryFleetRepository):
+        store.save_state = lambda s: (writes.append(s), original(s))
+    else:
+        batch = store.alerts.execute_item_batch
+        store.alerts.execute_item_batch = lambda *a, **k: (writes.append(a), batch(*a, **k))[1]
+    check_fleet(store, svc, T0 + timedelta(seconds=60))
+    assert writes == []
+
+
+def test_accepted_email_without_a_callback_is_retried_later_but_not_duplicated(store):
+    class Accepted:
+        calls = 0
+        def send(self, a):
+            self.calls += 1
+            return {'status': 'accepted'}
+    n = Accepted(); svc = AlertService(store, n)
+    a, _ = svc.raise_or_update('TRK-001', 'TEMPERATURE', 'hot', T0)
+    assert svc.claim_workflow(a.id, 'run-lost')  # that run dies before it reports a result
+    svc.retry_notifications(T0 + timedelta(minutes=5))
+    assert n.calls == 1  # still waiting for the provider
+    svc.retry_notifications(T0 + timedelta(minutes=16))
+    assert n.calls == 2
+    assert not svc.claim_workflow(a.id, 'run-two')  # the lost run may have sent it: never a second email
