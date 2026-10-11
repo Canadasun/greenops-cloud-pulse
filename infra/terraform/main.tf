@@ -297,6 +297,8 @@ resource "azurerm_logic_app_action_custom" "send_email" {
       method  = "post"
       path    = "/emails:sendGAVersion"
       queries = { "api-version" = "2023-03-31" }
+      # No in-run retries: a throttled (429) send would be repeated at once. The Function backs off and gives up instead.
+      retryPolicy = { type = "none" }
       body = {
         senderAddress = "DoNotReply@${azurerm_email_communication_service_domain.managed.from_sender_domain}"
         recipients    = { to = [for e in var.alert_emails : { address = e }] }
@@ -320,7 +322,7 @@ resource "azurerm_static_web_app" "dashboard" {
   tags                = local.tags
 }
 
-# ---- Cost guardrails (Role 4, NFR-07): budget alerts at USD 1 and USD 5
+# ---- Cost guardrails (Role 4, NFR-07): budget alerts at 1 and 5 in the billing currency (CAD on the student subscription)
 resource "azurerm_consumption_budget_resource_group" "budget" {
   name              = "budget-${local.name}"
   resource_group_id = azurerm_resource_group.rg.id
@@ -329,7 +331,7 @@ resource "azurerm_consumption_budget_resource_group" "budget" {
   time_period { start_date = "2026-10-01T00:00:00Z" }
   notification {
     enabled        = true
-    threshold      = 20 # 20 % of USD 5 = USD 1
+    threshold      = 20 # 20 % of 5 = 1
     operator       = "GreaterThan"
     contact_emails = var.budget_contact_emails
   }

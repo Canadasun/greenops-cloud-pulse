@@ -8,6 +8,7 @@ Environment variables (all optional):
   CONTROL_PORT            port of the fault-control API (default 8090)
   IOTHUB_HOSTNAME         set to <hub>.azure-devices.net to send to Azure IoT Hub instead of the local broker
   FAULTS_URL              on Azure: the Fleet API's /api/sim/trucks, polled for faults chosen on the dashboard
+  FAULTS_POLL_S           seconds between those polls (default 3; each poll is a billed Function call)
   RUN_FOR_S               stop after this many seconds (the Azure Container Apps job); unset = run until stopped
 """
 import json
@@ -240,7 +241,7 @@ def main():
     for p in procs:
         p.start()
     if os.getenv("FAULTS_URL"):
-        threading.Thread(target=poll_faults, args=(os.environ["FAULTS_URL"], faults, set(fleet)), daemon=True).start()
+        threading.Thread(target=poll_faults, args=(os.environ["FAULTS_URL"], faults, set(fleet), float(os.getenv("FAULTS_POLL_S", "3"))), daemon=True).start()
     log.info("started %d truck processes; fault API on port %s", len(procs), os.getenv("CONTROL_PORT", "8090"))
     run_for_s = float(os.environ["RUN_FOR_S"]) if os.getenv("RUN_FOR_S") else None
     serve(ControlServer(("0.0.0.0", int(os.getenv("CONTROL_PORT", "8090"))), faults, fleet.keys()), run_for_s)
