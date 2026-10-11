@@ -4,6 +4,7 @@ The alert document is also its outbox entry. External I/O only occurs after comm
 A claim prevents concurrent senders; the same alert ID is the delivery idempotency key.
 """
 import logging
+import os
 import uuid
 import time
 from datetime import timedelta
@@ -15,6 +16,19 @@ log = logging.getLogger('alerts')
 
 
 class AlertService:
+    # A refusing provider (e.g. email throttling) is retried with growing waits, then given up on: no endless resends.
+    MAX_EMAIL_ATTEMPTS = int(os.getenv('EMAIL_MAX_ATTEMPTS', '8'))
+
+    @staticmethod
+    def _next_attempt(attempts, now):
+        return iso(now + timedelta(seconds=min(30 * 2 ** min(attempts - 1, 7), 3600)))
+
+    def _record_failure(self, alert, now):
+        if alert.email_attempts >= self.MAX_EMAIL_ATTEMPTS:
+            alert.email_status, alert.email_next_attempt = 'abandoned', None
+        else:
+            alert.email_status, alert.email_next_attempt = 'failed', self._next_attempt(alert.email_attempts, now)
+
     def __init__(self, repo, notifier):
         self.repo, self.notifier = repo, notifier
 
@@ -72,6 +86,11 @@ class AlertService:
             alert = tx.get_alert(alert_id)
             if not notification_due(alert, now):
                 return None
+            if alert.email_attempts >= self.MAX_EMAIL_ATTEMPTS:  # e.g. an alert that looped before this limit existed
+                alert.email_status, alert.email_next_attempt = 'abandoned', None
+                alert.email_claim = alert.email_claim_until = None
+                tx.save_alert(alert)
+                return None
             alert.email_status = 'sending'
             alert.email_claim, alert.email_claim_until = claim_id, iso(now + timedelta(minutes=2))
             alert.email_attempts += 1
@@ -95,8 +114,7 @@ class AlertService:
             current.email_claim = current.email_claim_until = None
             current.email_error = error
             if error:
-                current.email_status = 'failed'
-                current.email_next_attempt = iso(now + timedelta(seconds=min(30 * 2 ** min(current.email_attempts - 1, 7), 3600)))
+                self._record_failure(current, now)
             else:
                 current.email_status = receipt.get('status', 'sent')
                 current.email_next_attempt = None
@@ -136,15 +154,15 @@ class AlertService:
                 return a  # a late callback cannot change a newer dispatch attempt
             if a.email_status == 'sent':
                 return a
-            a.email_status = status
             a.email_claim = a.email_claim_until = None
             if status == 'sent':
+                a.email_status, a.email_next_attempt = 'sent', None
                 a.email_sent_at = iso(now)
                 a.email_seconds = round(max(0, (now - parse(a.started_at)).total_seconds()), 3)
             else:
                 a.email_error = 'Email workflow failed'
-                a.email_next_attempt = iso(now + timedelta(minutes=1))
                 a.email_workflow_id = None
+                self._record_failure(a, now)
             tx.save_alert(a)
             return a
         return self.repo.mutate_truck(original.truck_id, change)

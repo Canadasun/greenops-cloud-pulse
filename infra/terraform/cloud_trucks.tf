@@ -79,6 +79,10 @@ resource "azurerm_container_app_job" "trucks" {
         value = "https://${azurerm_function_app_flex_consumption.func.default_hostname}/api/sim/trucks"
       }
       env {
+        name  = "FAULTS_POLL_S"
+        value = "10" # one poll per reading interval halves the Function calls of a run and stays inside the free grant
+      }
+      env {
         name  = "RUN_FOR_S"
         value = tostring(var.truck_run_minutes * 60)
       }

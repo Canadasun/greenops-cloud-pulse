@@ -24,3 +24,9 @@ test('shows a friendly message when there are no alerts', () => {
   render(<AlertHistory alerts={[]} onAcknowledge={() => {}} user="x" />);
   expect(screen.getByText(/No incidents reported/)).toBeInTheDocument();
 });
+
+test('an email whose retries were stopped is not shown as still queued', () => {
+  const stopped = { ...alerts[1], id: 'alt-3', email_sent_at: null, email_status: 'abandoned' };
+  render(<AlertHistory alerts={[stopped]} onAcknowledge={() => {}} user="x" />);
+  expect(screen.getByText(/not delivered · retries stopped/)).toBeInTheDocument();
+});

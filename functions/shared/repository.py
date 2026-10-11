@@ -44,9 +44,11 @@ class InMemoryFleetRepository:
 
     def mutate_truck(self, truck_id, callback):
         with self._lock:
-            tx = TruckTransaction(self, truck_id, self.get_state(truck_id))
+            before = self.get_state(truck_id)
+            tx = TruckTransaction(self, truck_id, before)
             result = callback(tx)
-            self.save_state(tx.state)
+            if tx.state != before or truck_id not in self.state:  # an idle check writes nothing
+                self.save_state(tx.state)
             for a in tx.changed.values():
                 self.save_alert(a)
             return deepcopy(result)
@@ -167,6 +169,8 @@ class CosmosFleetRepository:
             result = callback(tx)
             state = {k: v for k, v in tx.state.items() if not k.startswith("_")}
             state.update(id=state_id, truck_id=truck_id, doc_type="truck_state")
+            if existing and not tx.changed and state == {k: v for k, v in existing.items() if not k.startswith("_")}:
+                return result  # nothing changed: skip the write (the every-minute fleet check is the main idle cost)
             guard = ("replace", (state_id, state), {"if_match_etag": existing["_etag"]}) if existing else ("create", (state,))
             operations = [guard] + [("upsert", (a.to_doc(),)) for a in tx.changed.values()]
             try:
@@ -245,8 +249,8 @@ class CosmosFleetRepository:
         return [Alert.from_doc(d) for d in self.alerts.query_items(q, parameters=params, enable_cross_partition_query=True)]
 
     def pending_notifications(self, now, limit=50):
-        q = f"SELECT TOP {int(limit)} * FROM c WHERE c.doc_type = 'alert' AND (NOT IS_DEFINED(c.email_sent_at) OR IS_NULL(c.email_sent_at)) AND (NOT IS_DEFINED(c.email_status) OR c.email_status IN ('pending', 'failed', 'sending')) AND (NOT IS_DEFINED(c.email_next_attempt) OR IS_NULL(c.email_next_attempt) OR c.email_next_attempt <= @now) AND (NOT IS_DEFINED(c.email_claim_until) OR IS_NULL(c.email_claim_until) OR c.email_claim_until <= @now)"
-        return [Alert.from_doc(d) for d in self.alerts.query_items(q, parameters=[{"name": "@now", "value": iso(now)}], enable_cross_partition_query=True)]
+        q = f"SELECT TOP {int(limit)} * FROM c WHERE c.doc_type = 'alert' AND (NOT IS_DEFINED(c.email_sent_at) OR IS_NULL(c.email_sent_at)) AND (NOT IS_DEFINED(c.email_status) OR c.email_status IN ('pending', 'failed', 'sending') OR (c.email_status = 'accepted' AND c.email_accepted_at <= @stale)) AND (NOT IS_DEFINED(c.email_next_attempt) OR IS_NULL(c.email_next_attempt) OR c.email_next_attempt <= @now) AND (NOT IS_DEFINED(c.email_claim_until) OR IS_NULL(c.email_claim_until) OR c.email_claim_until <= @now)"
+        return [Alert.from_doc(d) for d in self.alerts.query_items(q, parameters=[{"name": "@now", "value": iso(now)}, {"name": "@stale", "value": iso(now - ACCEPTED_TIMEOUT)}], enable_cross_partition_query=True)]
 
     def alert_stats(self, since):
         # Aggregate in Cosmos; never download historical alert documents for health.
@@ -296,8 +300,12 @@ class CosmosFleetRepository:
         self.reference.upsert_item({"id": truck_id, "doc_type": "truck_fault", "truck_id": truck_id, "scenario": scenario})
 
 
+ACCEPTED_TIMEOUT = timedelta(minutes=15)  # a workflow run that never reported back is re-dispatched (bounded by the attempt limit)
+
+
 def notification_due(a, now):
-    return not a.email_sent_at and a.email_status in ("pending", "failed", "sending") and (
+    stale_accepted = a.email_status == "accepted" and bool(a.email_accepted_at) and parse(a.email_accepted_at) <= now - ACCEPTED_TIMEOUT
+    return not a.email_sent_at and (a.email_status in ("pending", "failed", "sending") or stale_accepted) and (
         not a.email_next_attempt or parse(a.email_next_attempt) <= now) and (
         not a.email_claim_until or parse(a.email_claim_until) <= now)
 
