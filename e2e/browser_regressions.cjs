@@ -121,7 +121,7 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
     await page.screenshot({ path: path.join(artifacts, 'desktop-detail.png'), fullPage: true });
     checks.push('obsolete chart data cleared, keyboard chart inspection, raw readings');
     await goto('view=alerts&tab=resolved'); await page.getByRole('button', { name: 'Next', exact: true }).click(); await page.getByText('Page 2', { exact: true }).waitFor();
-    await page.getByRole('button', { name: /Inspect TRK-001/ }).first().click(); await page.locator('.chart').waitFor();
+    await page.getByRole('button', { name: /Inspect truck TRK-001/ }).first().click(); await page.locator('.chart').waitFor();
     await page.getByRole('button', { name: /Back to incidents/ }).click(); await page.getByText('Page 2', { exact: true }).waitFor();
     await scan('resolved page 2');
     checks.push('resolved pagination retained across inspection');
