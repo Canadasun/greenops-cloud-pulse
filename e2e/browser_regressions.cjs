@@ -169,7 +169,13 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
     await page.unroute('**/api/alerts?*');
     await goto('view=fleet&mode=map'); await page.getByText('2 trucks share this location. Choose a truck:').waitFor();
     await page.locator('.map-overlap').getByRole('button', { name: 'TRK-004' }).click(); await page.getByRole('button', { name: 'Inspect TRK-004', exact: true }).click(); await page.locator('.chart').waitFor();
-    checks.push('simulation set/reset, partial outage, stale telemetry, 25 open incidents, co-located map trucks');
+    // Leaving the map while its first fit-to-fleet zoom is still running must not throw (Leaflet zoom-end timer).
+    for (const delay of [0, 100, 200, 300]) {
+      await goto('view=fleet&mode=map'); await page.locator('.leaflet-marker-icon').first().waitFor(); await page.waitForTimeout(delay);
+      await page.getByRole('navigation', { name: 'Dashboard views' }).getByRole('link', { name: /^Incidents/ }).click(); await page.waitForTimeout(400);
+    }
+    assert.deepEqual(errors, [], 'leaving the map during its zoom threw');
+    checks.push('simulation set/reset, partial outage, stale telemetry, 25 open incidents, co-located map trucks, leaving the map mid-zoom');
     await page.route('**/api/trucks', route => route.fulfill({ json: [{}] }));
     await page.goto(`${url}/?view=fleet`);
     await page.getByRole('alert').filter({ hasText: 'unexpected data' }).waitFor();

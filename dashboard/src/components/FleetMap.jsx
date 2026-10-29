@@ -22,6 +22,7 @@ function Controls({ trucks, selected }) {
     <button disabled={!truck} onClick={() => map.setView([truck.lat, truck.lon], 10)}>Locate selected</button>
   </div>;
 }
+// zoomAnimation off: Leaflet 1.9 ends an animated zoom on a timer, which throws if the map view is left meanwhile.
 export default function FleetMap({ trucks, routes, selected, onSelect }) {
   const visible = trucks.filter(t => Number.isFinite(t.lat) && Number.isFinite(t.lon));
   const [tileError, setTileError] = useState(false);
@@ -29,7 +30,7 @@ export default function FleetMap({ trucks, routes, selected, onSelect }) {
   const routeIds = new Set(trucks.map(t => t.route_id));
   const groups = new Map();
   visible.forEach(t => { const key = `${t.lat.toFixed(5)},${t.lon.toFixed(5)}`; groups.set(key, [...(groups.get(key) || []), t]); });
-  return <>{tileError && <p role="status" className="query-error">Map tiles are unavailable. Truck selection and readings remain available in the list.</p>}<MapContainer center={[44.7, -76.4]} zoom={7} className="map" scrollWheelZoom={false}>
+  return <>{tileError && <p role="status" className="query-error">Map tiles are unavailable. Truck selection and readings remain available in the list.</p>}<MapContainer center={[44.7, -76.4]} zoom={7} className="map" scrollWheelZoom={false} zoomAnimation={false}>
     <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" eventHandlers={{ tileerror: () => setTileError(true), load: () => {} }} />
     {routes && Object.entries(routes).filter(([id]) => routeIds.has(id)).map(([id, r]) => <Polyline key={id} positions={r.waypoints} pathOptions={{ color: selectedTruck?.route_id === id ? '#116747' : '#546c7b', weight: selectedTruck?.route_id === id ? 5 : 3, opacity: selectedTruck?.route_id === id ? 1 : 0.5, dashArray: '6 8' }} />)}
     {visible.map(t => <Marker key={t.truck_id} position={[t.lat, t.lon]} icon={icon(t.status, t.truck_id === selected)} eventHandlers={{ click: () => onSelect(t.truck_id) }} title={`${t.truck_id} – ${(STATUS[t.status]?.label || 'Unknown condition')}`}>
