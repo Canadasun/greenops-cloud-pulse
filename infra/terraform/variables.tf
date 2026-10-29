@@ -26,7 +26,7 @@ variable "alert_emails" {
   }
 }
 variable "budget_contact_emails" {
-  description = "People who receive the USD 1 and USD 5 budget alerts (NFR-07)"
+  description = "People who receive the CAD 2 and CAD 10 budget alerts (NFR-07)"
   type        = list(string)
 }
 variable "name_suffix" {

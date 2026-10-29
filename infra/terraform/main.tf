@@ -322,16 +322,17 @@ resource "azurerm_static_web_app" "dashboard" {
   tags                = local.tags
 }
 
-# ---- Cost guardrails (Role 4, NFR-07): budget alerts at 1 and 5 in the billing currency (CAD on the student subscription)
+# ---- Cost guardrails (Role 4, NFR-07): budget alerts at 2 and 10 in the billing currency (CAD on the student subscription).
+# Raised from 5 to 10 on 2026-10-13 after the first week's real spend; idle cost is now about CAD 0.05 a day.
 resource "azurerm_consumption_budget_resource_group" "budget" {
   name              = "budget-${local.name}"
   resource_group_id = azurerm_resource_group.rg.id
-  amount            = 5
+  amount            = 10
   time_grain        = "Monthly"
   time_period { start_date = "2026-10-01T00:00:00Z" }
   notification {
     enabled        = true
-    threshold      = 20 # 20 % of 5 = 1
+    threshold      = 20 # 20 % of 10 = 2
     operator       = "GreaterThan"
     contact_emails = var.budget_contact_emails
   }
