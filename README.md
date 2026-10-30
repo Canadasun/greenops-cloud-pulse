@@ -93,14 +93,15 @@ python e2e/azure_live_backend.py <resource-group> <iot-hub> <storage-account>   
 
 | Suite | Command | Tests |
 |---|---|---|
-| Simulator | `cd simulator && python -m pytest` | 22 |
+| Simulator | `cd simulator && python -m pytest` | 27 |
 | Broker security (live broker) | `python -m pytest broker/tests` | 5 |
 | Router | `cd broker/router && python -m pytest` | 11 |
-| Functions + storage contract | `cd functions && python -m pytest` (`COSMOS_ENDPOINT=http://localhost:8081` adds Cosmos integration cases) | 51 / 71 |
+| Functions + storage contract | `cd functions && python -m pytest` (`COSMOS_ENDPOINT=http://localhost:8081` adds Cosmos integration cases) | 65 / 89 |
 | Mail relay | `cd mail-relay && python -m pytest` | 7 |
-| Dashboard | `cd dashboard && npm run typecheck && npm test` | API types + unit regressions |
-| Browser + accessibility regressions (Chromium) | `cd dashboard && npm run build && npm run test:browser` | Responsive views, keyboard/focus, axe, operator actions and outages |
+| Dashboard | `cd dashboard && npm run typecheck && npm test` | 26 + API types |
+| Browser + accessibility regressions (Chromium) | `cd dashboard && npm run build && npm run test:browser` | 45 axe scans; responsive views, keyboard/focus, operator actions, outages, leaving the map mid-zoom |
 | **End to end** (whole system) | `docker compose -f docker-compose.yml -f e2e/compose.e2e.yml up -d --build && python -m pytest e2e` | 9 |
+| **Total in CI** | | **174** |
 
 GitHub Actions (`.github/workflows/ci.yml`) runs every suite on each push and pull request.
 
