@@ -1,0 +1,122 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      github_actions-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "npm"
+    directory: "/dashboard"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      npm-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "pip"
+    directory: "/broker/router"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      pip-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "pip"
+    directory: "/e2e"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      pip-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "pip"
+    directory: "/functions"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      pip-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "pip"
+    directory: "/simulator"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      pip-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "/broker"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      docker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "/broker/router"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      docker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "/dashboard"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      docker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "/functions"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      docker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "/mail-relay"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      docker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+  - package-ecosystem: "docker"
+    directory: "/simulator"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      docker-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
