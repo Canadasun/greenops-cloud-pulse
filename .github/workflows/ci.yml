@@ -14,7 +14,7 @@ jobs:
     defaults: { run: { working-directory: simulator } }
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest -v
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
       - run: pip install pytest paho-mqtt
       - name: Router unit tests
@@ -47,7 +47,7 @@ jobs:
         env: { PROTOCOL: http }
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
       - run: pip install -r functions/requirements-dev.txt
       - name: Unit tests and storage contract against the Cosmos DB emulator
@@ -68,7 +68,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
       - run: pip install -r ../functions/requirements-dev.txt
       - run: npx playwright install --with-deps chromium
@@ -79,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with: { python-version: "3.12" }
       - run: pip install -r e2e/requirements.txt
       - run: python3 scripts/init_local.py
