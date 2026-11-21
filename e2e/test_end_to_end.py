@@ -95,8 +95,11 @@ def test_temperature_breach_gives_one_alert_and_one_email_within_30_seconds():  
     alert = wait_for(lambda: alerts("TRK-001", "TEMPERATURE"), 30, 1)
     assert alert, "no alert within 30 s of the first reading above 8 °C"
     mail = wait_for(lambda: emails_for("TRK-001", "Temperature breach"), 30, 1)
-    alert = alerts("TRK-001", "TEMPERATURE")  # re-read: the outbox records the send time just after the alert is saved
-    assert mail and alert[0]["email_seconds"] is not None and alert[0]["email_seconds"] < 30
+    # the relay reports the send to the Function just after Mailpit accepts the mail, so wait for that report
+    alert = wait_for(lambda: [a for a in alerts("TRK-001", "TEMPERATURE") if a.get("email_seconds") is not None], 30, 1)
+    assert mail, "no email within 30 s"
+    assert alert, "the email was delivered but its send time was never recorded"
+    assert alert[0]["email_seconds"] < 30
     time.sleep(40)  # four more breaching readings
     assert len(alerts("TRK-001", "TEMPERATURE")) == 1 and len(emails_for("TRK-001", "Temperature breach")) == 1
     fault("TRK-001", "none")

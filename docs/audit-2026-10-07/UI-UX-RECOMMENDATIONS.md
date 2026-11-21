@@ -1,6 +1,6 @@
-# GreenOps Cloud Pulse — senior frontend UI/UX review
+# GreenOps Cloud Pulse – dashboard UI/UX review (Role 5, Group 3)
 
-Based on the React implementation and browser checks at 1440px and 390px. The recommendations below were used as the remediation checklist; the resulting changes are implemented in the current dashboard.
+Based on the team's React implementation and browser checks at 1440px and 390px. The recommendations below were used as the remediation checklist; the resulting changes are implemented in the current dashboard.
 
 The dashboard should help a dispatcher answer three questions quickly: which trucks need attention, what is happening, and what action has already been taken. The current map communicates location well, but a long history table dominates the page and incident actions can be difficult to reach.
 

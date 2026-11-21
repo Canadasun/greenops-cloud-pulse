@@ -141,8 +141,9 @@ GitHub Actions (`.github/workflows/ci.yml`) runs every suite on each push and pu
 
 `contracts/telemetry.schema.json` (Part 1, Appendix A) – about 0.3 KB per message.
 
-## Review notes
+## Team code reviews
 
-See [the remediation and rollout notes](docs/audit-2026-10-07/FIXES.md) for authentication, persistence, coordinated API upgrades and test instructions. The audit findings and UI recommendations are preserved alongside that document.
+The team reviewed the code base twice and fixed every finding with a test:
 
-The frontend upgrade and accessibility validation are documented in [the October 10 implementation notes](docs/audit-2026-10-10/IMPLEMENTATION.md).
+- **7 October 2026** – whole-system review: [findings](docs/audit-2026-10-07/REPORT.md) and [fixes](docs/audit-2026-10-07/FIXES.md) (authentication, persistence, retries, test instructions), plus the [dashboard UI/UX review](docs/audit-2026-10-07/UI-UX-RECOMMENDATIONS.md).
+- **10 October 2026** – dashboard review: [proposal](docs/audit-2026-10-10/FRONTEND-AUDIT.md) and [implementation notes](docs/audit-2026-10-10/IMPLEMENTATION.md) (new views, accessibility checks).
