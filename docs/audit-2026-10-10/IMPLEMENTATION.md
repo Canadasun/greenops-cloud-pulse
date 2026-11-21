@@ -1,4 +1,4 @@
-# Frontend upgrade implementation
+# Dashboard upgrade implementation (Role 5, Group 3)
 
 The October 10 frontend findings have been addressed in the application, dashboard-facing history API, tests and documentation. The redesign retains the existing backend acknowledgement semantics and in-memory operator-key model.
 

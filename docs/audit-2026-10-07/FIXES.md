@@ -1,6 +1,6 @@
-# Audit remediation — 7 October 2026
+# Code review fixes – 7 October 2026 (Group 3)
 
-The 20 findings in REPORT.md now have code/configuration fixes. The report remains the original audit record. This file describes the resulting behavior and operational requirements.
+The 20 findings in REPORT.md now have code/configuration fixes. REPORT.md remains the original record of the review. This file describes the resulting behavior and operational requirements.
 
 | Findings | Change |
 |---|---|

@@ -1,6 +1,6 @@
-# GreenOps frontend audit and upgrade proposal
+# GreenOps dashboard review and upgrade proposal (Role 5, Group 3)
 
-Reviewed 10 October 2026. Scope: every dashboard source component, styles, API client and polling lifecycle; dashboard-facing Functions contracts; build/serving configuration, CI, existing frontend tests, prior remediation notes and freshly generated browser screenshots. This is a frontend/product audit across the build, not a fresh certification of Azure infrastructure, security, or the ingestion pipeline. Live Azure, real operator research, assistive-technology testing and production performance were not exercised.
+Reviewed 10 October 2026. Scope: every dashboard source component, styles, API client and polling lifecycle; dashboard-facing Functions contracts; build/serving configuration, CI, existing frontend tests, prior remediation notes and freshly generated browser screenshots. This is a dashboard and product review by the team, not a fresh certification of Azure infrastructure, security, or the ingestion pipeline. Live Azure, real operator research, assistive-technology testing and production performance were not exercised.
 
 ## Assessment
 

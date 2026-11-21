@@ -1,6 +1,6 @@
-# GreenOps Cloud Pulse audit — 7 October 2026
+# GreenOps Cloud Pulse – Group 3 code review, 7 October 2026
 
-Audited the current working tree, including its pre-existing uncommitted Azure changes. Application source was not changed. Scope: React UI, API handlers, alert lifecycle, Cosmos repository, MQTT router, simulator, mail relay, contracts, Docker configuration, Terraform, deployment/certificate scripts, and tests.
+The team reviewed the whole code base against the Part 1 requirements after the first working version, including the Azure deployment changes in progress at the time. This document records the findings before any fix. Scope: React UI, API handlers, alert lifecycle, Cosmos repository, MQTT router, simulator, mail relay, contracts, Docker configuration, Terraform, deployment/certificate scripts, and tests.
 
 The main risks are incorrect alert state after delayed/repeated delivery, missing notification recovery, unprotected control endpoints, and misleading dashboard states. Happy-path tests pass, but they do not cover these failure modes.
 
