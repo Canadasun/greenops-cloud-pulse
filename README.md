@@ -4,8 +4,13 @@ CST8922 – Capstone Project · Group 3 · Category 4: IoT & Real-Time Processin
 
 Six simulated refrigerated trucks send GPS, temperature, humidity and door readings every 10 seconds. The system checks every
 reading against the cargo's safe range, emails staff within 30 seconds when something goes wrong, keeps a raw archive for audits
-and shows the fleet on a live map. This repository is the **Part 3 build**: the complete pipeline runs **on a local server** with
-Docker stand-ins for each Azure service in the Part 2 design, and the same code is ready for Azure (`infra/terraform`).
+and shows the fleet on a live map.
+
+This repository is the **Part 3 code submission**. The whole system runs **on one computer** with Docker, where each Azure service
+from the Part 2 design has a local stand-in, and the **same code is deployed live on Microsoft Azure**:
+<https://purple-tree-07c86780f.2.azurestaticapps.net>. Commit history: <https://github.com/Canadasun/greenops-cloud-pulse/commits/main>.
+
+**Quick start:** read *Folder structure* to find each part, then *Run it on your computer*.
 
 ![Architecture](docs/architecture-local.png)
 
@@ -32,19 +37,46 @@ Docker stand-ins for each Azure service in the Part 2 design, and the same code 
 | Azure Blob Storage | `azurite` | 10000 |
 | Azure Static Web Apps | `dashboard` – nginx serving the React build | **5173** |
 
-## Run it
+## Folder structure
 
-```bash
-python3 scripts/init_local.py       # create local operator/service credentials
-bash scripts/make_certs.sh          # 1. create the device certificates (never committed)
-docker compose up -d --build        # 2. start all 10 services
-# 3. open http://localhost:5173 (dashboard) and http://localhost:8025 (alert inbox)
-docker compose down                 # stop
+```
+greenops-cloud-pulse/
+├── simulator/          Role 1 – truck simulator: six trucks, routes, cargo profiles, fault scenarios (Python)
+├── contracts/          Role 1 – shared data contract: message JSON Schema, fleet and cargo limits
+├── broker/             Role 2 – Mosquitto broker with mutual TLS, access rules, revocation list
+│   └── router/         Role 2 – message routing to the Alert Function and the Blob archive (stand-in for IoT Hub routing)
+├── functions/          Roles 3, 4, 5 – Azure Functions app (Python)
+│   ├── function_app.py     all triggers: Alert Function, Fleet Watcher timer, Fleet API routes
+│   └── shared/             alert rules, fleet watcher, validation, storage repository, Fleet API, sign-in
+├── mail-relay/         Role 3 – local stand-in for the Logic App that sends alert emails
+├── dashboard/          Role 5 – React + Leaflet web dashboard (TypeScript, Vite)
+├── e2e/                end-to-end tests of the whole system, browser tests and the live Azure checks
+├── infra/terraform/    Terraform that creates every Azure resource
+├── scripts/            certificates, local set-up, Azure device registration and deployment
+├── docs/               architecture diagrams and review notes
+├── docker-compose.yml  starts the whole local system (10 services)
+└── .github/workflows/  CI: GitHub Actions runs every test on each pull request
 ```
 
-Connect an operator key from `.env` in the dashboard, then open **System**.
-Direct simulator control requires `Authorization: Bearer <SIM_CONTROL_TOKEN>`. For example:
-`curl -X POST localhost:8090/trucks/TRK-003/fault -H 'Authorization: Bearer <SIM_CONTROL_TOKEN>' -H 'Content-Type: application/json' -d '{"scenario":"compressor"}'`
+Each module starts with a comment naming its owner and the requirement it implements. More detail is in the
+README inside `simulator/`, `broker/`, `functions/` and `dashboard/`.
+
+## Run it on your computer
+
+**You need:** Docker Desktop (or Docker Engine with Compose), Git, Python 3 and OpenSSL. No Azure account is needed.
+
+```bash
+git clone https://github.com/Canadasun/greenops-cloud-pulse.git && cd greenops-cloud-pulse
+python3 scripts/init_local.py       # 1. create local operator and service keys in .env (not committed)
+bash scripts/make_certs.sh          # 2. create the device certificates (not committed)
+docker compose up -d --build        # 3. build and start all 10 services (first time: a few minutes)
+# 4. open http://localhost:5173 (dashboard) and http://localhost:8025 (alert inbox)
+docker compose down                 # 5. stop everything
+```
+
+To try an alert: in the dashboard choose **Read-only · Connect operator**, paste an operator key from `.env`, open
+**System → Demo fault scenarios** and set TRK-003 to **Compressor failure**. About a minute later the alert appears on the dashboard
+and its email arrives in the inbox at http://localhost:8025.
 
 ## Run it on Azure
 
@@ -109,7 +141,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs every suite on each push and pu
 
 `contracts/telemetry.schema.json` (Part 1, Appendix A) – about 0.3 KB per message.
 
-## Audit remediation and upgrades
+## Review notes
 
 See [the remediation and rollout notes](docs/audit-2026-10-07/FIXES.md) for authentication, persistence, coordinated API upgrades and test instructions. The audit findings and UI recommendations are preserved alongside that document.
 
