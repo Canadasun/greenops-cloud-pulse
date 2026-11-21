@@ -42,7 +42,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       cosmos:
-        image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+        # Pinned: the vnext-preview build published 2026-11-21 (sha256:09dcd04…) fails the storage tests with emulator-internal errors.
+        image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview@sha256:db53613dae19d0a3d5ad50688d14aa6e957af082dafea56b52e1bd3a6b3f1406
         ports: ["8081:8081"]
         env: { PROTOCOL: http }
     steps:

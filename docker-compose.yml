@@ -29,7 +29,8 @@ services:
 
   # ---- Role 4 · Durmusali – Azure Cosmos DB and Blob Storage stand-ins
   cosmos:
-    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
+    # Pinned to the last emulator build that passes the storage contract tests (see .github/workflows/ci.yml).
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview@sha256:db53613dae19d0a3d5ad50688d14aa6e957af082dafea56b52e1bd3a6b3f1406
     command: ["--protocol", "http"]
     volumes: ["cosmos-data:/data"]
     ports: ["127.0.0.1:8081:8081", "127.0.0.1:1234:1234"]   # 1234 = Data Explorer
