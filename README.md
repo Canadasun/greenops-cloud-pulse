@@ -24,6 +24,8 @@ from the Part 2 design has a local stand-in, and the **same code is deployed liv
 | 4 – Cloud Storage & Cost Analysis | Durmusali Unal | `functions/shared/repository.py`, archive in `broker/router` | FR-09, F11 cost model |
 | 5 – Dashboard & User Deliverables | Idowu Ayeni | `dashboard/`, `functions/shared/dashboard_api.py` | FR-10, FR-11 |
 
+Role 3 (Email): every alert is saved first with `email_status = pending`. On Azure the Logic App claims the alert, sends the email through Azure Communication Services and reports the result; locally the mail relay delivers to Mailpit. Failed sends are retried with growing waits up to a fixed limit, then marked `abandoned` (the alert stays open on the dashboard). The Fleet Watcher skips trucks whose last reading is `parked`.
+
 ## Azure design → local stand-in
 
 | Part 2 (Azure) | Local (this build) | Port |
@@ -135,7 +137,7 @@ python e2e/azure_live_backend.py <resource-group> <iot-hub> <storage-account>   
 | **End to end** (whole system) | `docker compose -f docker-compose.yml -f e2e/compose.e2e.yml up -d --build && python -m pytest e2e` | 9 |
 | **Total in CI** | | **174** |
 
-GitHub Actions (`.github/workflows/ci.yml`) runs every suite on each pull request and on each push to `main`. The Cosmos DB emulator image is pinned by digest in `docker-compose.yml` so a new preview release cannot break the storage tests.
+GitHub Actions (`.github/workflows/ci.yml`) runs every suite on each push and pull request.
 
 ## Message format
 
