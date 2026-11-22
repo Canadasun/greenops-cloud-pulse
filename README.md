@@ -24,6 +24,8 @@ from the Part 2 design has a local stand-in, and the **same code is deployed liv
 | 4 – Cloud Storage & Cost Analysis | Durmusali Unal | `functions/shared/repository.py`, archive in `broker/router` | FR-09, F11 cost model |
 | 5 – Dashboard & User Deliverables | Idowu Ayeni | `dashboard/`, `functions/shared/dashboard_api.py` | FR-10, FR-11 |
 
+Email (Role 3): every alert is saved first with `email_status = pending`. On Azure the Logic App claims the alert, sends the email through Azure Communication Services and reports the result; locally the mail relay delivers to Mailpit. Failed sends are retried with growing waits up to a fixed limit, then marked `abandoned` (the alert stays open on the dashboard). The Fleet Watcher skips trucks whose last reading is `parked`.
+
 ## Azure design → local stand-in
 
 | Part 2 (Azure) | Local (this build) | Port |
