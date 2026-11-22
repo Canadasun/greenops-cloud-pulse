@@ -1,4 +1,4 @@
-# Continuous integration: every push and pull request runs every test suite (NFR-06).
+# Continuous integration: every pull request and every push to main runs every test suite (NFR-06).
 name: CI
 on:
   push:

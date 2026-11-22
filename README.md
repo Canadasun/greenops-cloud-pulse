@@ -135,7 +135,7 @@ python e2e/azure_live_backend.py <resource-group> <iot-hub> <storage-account>   
 | **End to end** (whole system) | `docker compose -f docker-compose.yml -f e2e/compose.e2e.yml up -d --build && python -m pytest e2e` | 9 |
 | **Total in CI** | | **174** |
 
-GitHub Actions (`.github/workflows/ci.yml`) runs every suite on each push and pull request.
+GitHub Actions (`.github/workflows/ci.yml`) runs every suite on each pull request and on each push to `main`. The Cosmos DB emulator image is pinned by digest in `docker-compose.yml` so a new preview release cannot break the storage tests.
 
 ## Message format
 
