@@ -6,8 +6,11 @@ contracts/telemetry.schema.json. Fault scenarios (FR-02) change the readings so 
 import random
 from datetime import datetime, timedelta, timezone
 
-SCENARIOS = ("none", "compressor", "door", "delay", "offline")
+SCENARIOS = ("none", "compressor", "humidity", "door", "delay", "offline")
 COMPRESSOR_RISE_C = 0.6        # temperature gained per reading while the compressor is broken
+HUMIDITY_RISE_PCT = 2.0        # humidity gained per reading while the dehumidifier is broken
+HUMIDITY_CEILING_PCT = 99.0    # damp air saturates, it never passes 100 %
+DRYING_PCT = 4.0               # after the repair the cargo space dries out step by step
 DELAY_SPEED_FACTOR = 0.15      # a delayed truck moves at 15 % of its normal speed
 AMBIENT_C = 24.0               # a broken compressor warms the cargo up to the outside temperature, not beyond
 
@@ -78,7 +81,14 @@ class TruckSimulator:
             span = p.temp_max_c - p.temp_min_c
             self.temp_c += (p.mid_temp_c - self.temp_c) * 0.3 + self.rng.uniform(-0.08, 0.08) * span
             self.temp_c = min(max(self.temp_c, p.temp_min_c + 0.1 * span), p.temp_max_c - 0.1 * span)
-        self.humidity_pct = min(max(self.humidity_pct + self.rng.uniform(-1.5, 1.5), 40.0), p.humidity_max_pct - 3)
+        if self.scenario == "humidity":
+            self.humidity_pct = min(self.humidity_pct + HUMIDITY_RISE_PCT, HUMIDITY_CEILING_PCT)
+            return
+        ceiling = p.humidity_max_pct - 3  # the dehumidifier keeps the air below the limit
+        if self.humidity_pct > ceiling:
+            self.humidity_pct = max(self.humidity_pct - DRYING_PCT, ceiling)
+        else:
+            self.humidity_pct = min(max(self.humidity_pct + self.rng.uniform(-1.5, 1.5), 40.0), ceiling)
 
     def next_reading(self) -> dict:
         now = self.clock()

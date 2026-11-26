@@ -1,0 +1,10 @@
+{
+  "name": "greenops-sign-in-api",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Static Web Apps API: turns a Microsoft sign-in into a short-lived Fleet API session – Role 5 (Idowu Ayeni)",
+  "main": "src/functions.js",
+  "engines": { "node": ">=20" },
+  "scripts": { "test": "node --test" },
+  "dependencies": { "@azure/functions": "4.8.0" }
+}

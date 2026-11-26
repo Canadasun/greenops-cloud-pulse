@@ -1,4 +1,5 @@
-"""Mail relay – local stand-in for the Azure Logic App that emails staff (Role 3 – Shi Wang).
+"""Mail relay – local stand-in for the Azure Logic App that emails staff and for Azure Monitor SMS (Role 3 – Shi Wang).
+POST /sms with {"alert_id","truck_id","type","text"} → one message marked [SMS] in the local inbox.
 POST / with {"to","alert_id","truck_id","type","details","started_at"} → one email via SMTP (Mailpit locally)."""
 import json
 import os
@@ -32,9 +33,23 @@ def build_email(alert, sender="alerts@greenops.local"):
     return msg
 
 
-def send(alert, host=None, port=None):
+def build_sms(request, sender="sms@greenops.local"):
+    fields = ("alert_id", "truck_id", "type", "text")
+    if not isinstance(request, dict) or any(not isinstance(request.get(k), str) or not request[k] for k in fields):
+        raise ValueError("alert_id, truck_id, type and text are required")
+    if len(request["text"]) > 160:
+        raise ValueError("a text message has at most 160 characters")
+    msg = EmailMessage()
+    msg["From"], msg["To"] = sender, "sms-on-call@greenops.local"
+    msg["Message-ID"] = f"<sms-{request['alert_id']}@greenops.local>"
+    msg["Subject"] = f"[SMS] {request['truck_id']}"
+    msg.set_content(request["text"])
+    return msg
+
+
+def send(message, host=None, port=None):
     with smtplib.SMTP(host or os.getenv("SMTP_HOST", "mailpit"), int(port or os.getenv("SMTP_PORT", "1025")), timeout=10) as s:
-        s.send_message(build_email(alert))
+        s.send_message(message)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -61,13 +76,15 @@ class Handler(BaseHTTPRequestHandler):
             if not 0 < length <= 16384:
                 return self._reply(413, {"error": "invalid body size"})
             alert = json.loads(self.rfile.read(length))
-            build_email(alert)
+            sms = self.path.rstrip("/") == "/sms"
+            message = build_sms(alert) if sms else build_email(alert)
+            receipt = ("sms-" if sms else "") + alert["alert_id"]
             # Persist receipts so a retried HTTP delivery does not send another email.
             with SEND_LOCK, sqlite3.connect(os.getenv("RECEIPTS_DB", "/data/receipts.sqlite")) as db:
                 db.execute("CREATE TABLE IF NOT EXISTS sent (id TEXT PRIMARY KEY)")
-                if not db.execute("SELECT id FROM sent WHERE id=?", (alert["alert_id"],)).fetchone():
-                    send(alert)
-                    db.execute("INSERT INTO sent VALUES (?)", (alert["alert_id"],))
+                if not db.execute("SELECT id FROM sent WHERE id=?", (receipt,)).fetchone():
+                    send(message)
+                    db.execute("INSERT INTO sent VALUES (?)", (receipt,))
         except ValueError as e:
             return self._reply(400, {"error": str(e)})
         except OSError as e:

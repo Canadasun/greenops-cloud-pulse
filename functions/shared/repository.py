@@ -7,6 +7,8 @@ Containers (all partitioned so one truck's data is stored together):
 Two implementations share one interface: CosmosFleetRepository (Cosmos DB / emulator) and InMemoryFleetRepository (tests).
 """
 from datetime import timedelta
+from collections import namedtuple
+from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from threading import RLock
 import hashlib
@@ -16,6 +18,16 @@ import time
 from .models import OPEN_STATUSES, Alert, iso, parse
 
 TELEMETRY_TTL_S = 7 * 24 * 3600
+COSMOS_BATCH_LIMIT = 100   # most operations Cosmos DB accepts in one transactional batch
+PARALLEL_PARTITIONS = 8    # trucks written at the same time; more only queues up on the Cosmos DB connection pool
+HISTORY_FIELDS = ("truck_id", "timestamp", "temp_c", "humidity_pct", "door_open")
+
+# Everything the dashboard and the Fleet Watcher need about the whole fleet, read in one query.
+FleetSnapshot = namedtuple("FleetSnapshot", "states open_alerts")  # {truck_id: state}, [Alert, ...]
+
+
+def chunks(items, size):
+    return [items[i:i + size] for i in range(0, len(items), size)]
 
 
 class TruckTransaction:
@@ -74,7 +86,8 @@ class InMemoryFleetRepository:
         return [s["last_reading"] for s in self.state.values() if s.get("last_reading")]
 
     def history(self, truck_id, since):
-        return sorted((r for r in self.readings if r["truck_id"] == truck_id and r["timestamp"] >= iso(since)), key=lambda r: r["timestamp"])
+        found = (r for r in self.readings if r["truck_id"] == truck_id and r["timestamp"] >= iso(since))
+        return sorted(({k: r[k] for k in HISTORY_FIELDS} for r in found), key=lambda r: r["timestamp"])
 
     def count_readings_since(self, since):
         return sum(1 for r in self.readings if r["timestamp"] >= iso(since))
@@ -102,7 +115,7 @@ class InMemoryFleetRepository:
         return deepcopy(sorted(items, key=lambda a: (a.started_at, a.id), reverse=True)[:limit])
 
     def pending_notifications(self, now, limit=50):
-        return deepcopy([a for a in self.alerts.values() if notification_due(a, now)][:limit])
+        return deepcopy([a for a in self.alerts.values() if notification_due(a, now) or sms_due(a, now)][:limit])
 
     def alert_stats(self, since):
         return stats([a for a in self.alerts.values() if parse(a.started_at) >= since])
@@ -119,6 +132,9 @@ class InMemoryFleetRepository:
 
     def all_states(self):
         return [dict(s) for s in self.state.values()]
+
+    def fleet_snapshot(self):
+        return FleetSnapshot(deepcopy(self.state), deepcopy([a for a in self.alerts.values() if a.status in OPEN_STATUSES]))
 
     # --- demo fault table (Azure: chosen on the dashboard, read by the trucks)
     def get_faults(self):
@@ -189,16 +205,37 @@ class CosmosFleetRepository:
         return self.telemetry.read().get("defaultTtl")
 
     def save_readings(self, msgs):
+        """Store readings with one transactional batch per truck (not one request per reading), trucks in parallel.
+        A replayed reading keeps its first stored copy; the result has the same order as msgs."""
+        docs = [{**m, "id": f"{m['truck_id']}-{m['timestamp']}"} for m in msgs]
+        by_truck = {}
+        for doc in docs:
+            by_truck.setdefault(doc["truck_id"], {}).setdefault(doc["id"], doc)
+        jobs = [(truck_id, part) for truck_id, unique in by_truck.items() for part in chunks(list(unique.values()), COSMOS_BATCH_LIMIT)]
+        stored = {}
+        with ThreadPoolExecutor(min(PARALLEL_PARTITIONS, max(1, len(jobs)))) as pool:
+            for part in pool.map(lambda job: self._create_readings(*job), jobs):
+                stored.update(part)
+        return [stored[doc["id"]] for doc in docs]
+
+    def _create_readings(self, truck_id, docs):
+        from azure.cosmos.exceptions import CosmosBatchOperationError
+        try:
+            self.telemetry.execute_item_batch([("create", (d,)) for d in docs], partition_key=truck_id)
+            return {d["id"]: d for d in docs}
+        except CosmosBatchOperationError as e:
+            if not any(r.get("statusCode") == 409 for r in e.operation_responses):
+                raise
+        # At least one reading was already stored (a replay): a batch is all or nothing, so store these one by one.
+        return {d["id"]: self._create_or_read(d) for d in docs}
+
+    def _create_or_read(self, doc):
         from azure.cosmos.exceptions import CosmosResourceExistsError
-        saved = []
-        for m in msgs:
-            doc = {**m, "id": f"{m['truck_id']}-{m['timestamp']}"}
-            try:
-                stored = self.telemetry.create_item(doc)
-            except CosmosResourceExistsError:
-                stored = self.telemetry.read_item(doc["id"], partition_key=m["truck_id"])
-            saved.append({k: v for k, v in stored.items() if not k.startswith("_")})
-        return saved
+        try:
+            stored = self.telemetry.create_item(doc)
+        except CosmosResourceExistsError:
+            stored = self.telemetry.read_item(doc["id"], partition_key=doc["truck_id"])
+        return {k: v for k, v in stored.items() if not k.startswith("_")}
 
     def latest_readings(self):
         out = []
@@ -208,7 +245,7 @@ class CosmosFleetRepository:
         return out
 
     def history(self, truck_id, since):
-        q = "SELECT * FROM c WHERE c.truck_id = @t AND c.timestamp >= @s ORDER BY c.timestamp"
+        q = f"SELECT {', '.join('c.' + f for f in HISTORY_FIELDS)} FROM c WHERE c.truck_id = @t AND c.timestamp >= @s ORDER BY c.timestamp"
         return list(self.telemetry.query_items(q, parameters=[{"name": "@t", "value": truck_id}, {"name": "@s", "value": iso(since)}], partition_key=truck_id))
 
     def count_readings_since(self, since):
@@ -249,19 +286,16 @@ class CosmosFleetRepository:
         return [Alert.from_doc(d) for d in self.alerts.query_items(q, parameters=params, enable_cross_partition_query=True)]
 
     def pending_notifications(self, now, limit=50):
-        q = f"SELECT TOP {int(limit)} * FROM c WHERE c.doc_type = 'alert' AND (NOT IS_DEFINED(c.email_sent_at) OR IS_NULL(c.email_sent_at)) AND (NOT IS_DEFINED(c.email_status) OR c.email_status IN ('pending', 'failed', 'sending') OR (c.email_status = 'accepted' AND c.email_accepted_at <= @stale)) AND (NOT IS_DEFINED(c.email_next_attempt) OR IS_NULL(c.email_next_attempt) OR c.email_next_attempt <= @now) AND (NOT IS_DEFINED(c.email_claim_until) OR IS_NULL(c.email_claim_until) OR c.email_claim_until <= @now)"
+        q = f"SELECT TOP {int(limit)} * FROM c WHERE c.doc_type = 'alert' AND (({SMS_DUE_SQL}) OR ((NOT IS_DEFINED(c.email_sent_at) OR IS_NULL(c.email_sent_at)) AND (NOT IS_DEFINED(c.email_status) OR c.email_status IN ('pending', 'failed', 'sending') OR (c.email_status = 'accepted' AND c.email_accepted_at <= @stale)) AND (NOT IS_DEFINED(c.email_next_attempt) OR IS_NULL(c.email_next_attempt) OR c.email_next_attempt <= @now) AND (NOT IS_DEFINED(c.email_claim_until) OR IS_NULL(c.email_claim_until) OR c.email_claim_until <= @now)))"
         return [Alert.from_doc(d) for d in self.alerts.query_items(q, parameters=[{"name": "@now", "value": iso(now)}, {"name": "@stale", "value": iso(now - ACCEPTED_TIMEOUT)}], enable_cross_partition_query=True)]
 
     def alert_stats(self, since):
-        # Aggregate in Cosmos; never download historical alert documents for health.
-        params = [{"name": "@since", "value": iso(since)}]
-        where = "c.doc_type = 'alert' AND c.started_at >= @since"
-        def scalar(expr, condition=""):
-            return sum(v or 0 for v in self.alerts.query_items(f"SELECT VALUE {expr} FROM c WHERE {where}{condition}", parameters=params, enable_cross_partition_query=True))
-        sent = " AND IS_STRING(c.email_sent_at)"
-        count, emails = scalar("COUNT(1)"), scalar("COUNT(1)", sent)
-        seconds = scalar("SUM(c.email_seconds)", sent)
-        return {"alerts_today": count, "emails_today": emails, "avg_email_seconds": round(seconds / max(emails, 1), 2)}
+        # One small query (two fields, today's alerts only) instead of three aggregate queries.
+        q = "SELECT c.email_sent_at, c.email_seconds FROM c WHERE c.doc_type = 'alert' AND c.started_at >= @since"
+        today = list(self.alerts.query_items(q, parameters=[{"name": "@since", "value": iso(since)}], enable_cross_partition_query=True))
+        sent = [a for a in today if a.get("email_sent_at")]
+        return {"alerts_today": len(today), "emails_today": len(sent),
+                "avg_email_seconds": round(sum(a.get("email_seconds") or 0 for a in sent) / max(len(sent), 1), 2)}
 
     def save_notification(self, n):
         self.alerts.upsert_item({**n, "doc_type": "notification"})
@@ -286,6 +320,17 @@ class CosmosFleetRepository:
             old[s["truck_id"]] = s
         return list(old.values())
 
+    def fleet_snapshot(self):
+        q = ("SELECT * FROM c WHERE c.doc_type = 'truck_state' OR "
+             "(c.doc_type = 'alert' AND (c.status = 'ACTIVE' OR c.status = 'ACKNOWLEDGED'))")
+        states, alerts = {}, []
+        for doc in self.alerts.query_items(q, enable_cross_partition_query=True):
+            if doc["doc_type"] == "truck_state":
+                states[doc["truck_id"]] = doc
+            else:
+                alerts.append(Alert.from_doc(doc))
+        return FleetSnapshot(states, alerts)
+
     def get_faults(self):
         from azure.cosmos.exceptions import CosmosResourceNotFoundError
         try:
@@ -301,6 +346,18 @@ class CosmosFleetRepository:
 
 
 ACCEPTED_TIMEOUT = timedelta(minutes=15)  # a workflow run that never reported back is re-dispatched (bounded by the attempt limit)
+
+
+# Pending or failed texts, and texts whose worker stopped in the middle of sending.
+SMS_DUE_SQL = ("IS_DEFINED(c.sms_status) AND c.sms_status IN ('pending', 'failed', 'sending') "
+               "AND (NOT IS_DEFINED(c.sms_next_attempt) OR IS_NULL(c.sms_next_attempt) OR c.sms_next_attempt <= @now) "
+               "AND (NOT IS_DEFINED(c.sms_claim_until) OR IS_NULL(c.sms_claim_until) OR c.sms_claim_until <= @now)")
+
+
+def sms_due(a, now):
+    return a.sms_status in ("pending", "failed", "sending") and (
+        not a.sms_next_attempt or parse(a.sms_next_attempt) <= now) and (
+        not a.sms_claim_until or parse(a.sms_claim_until) <= now)
 
 
 def notification_due(a, now):

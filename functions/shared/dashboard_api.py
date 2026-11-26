@@ -28,10 +28,11 @@ def _status(open_types, has_data, parked=False):
 
 
 def trucks_view(repo, now):
-    latest = {r["truck_id"]: r for r in repo.latest_readings()}
-    parked = {s["truck_id"] for s in repo.all_states() if is_parked(s)}
+    snapshot = repo.fleet_snapshot()  # one query for the whole fleet: this is the request every open dashboard repeats
+    latest = {t: s["last_reading"] for t, s in snapshot.states.items() if s.get("last_reading")}
+    parked = {t for t, s in snapshot.states.items() if is_parked(s)}
     open_by_truck = {}
-    for a in repo.open_alerts():
+    for a in snapshot.open_alerts:
         open_by_truck.setdefault(a.truck_id, set()).add(a.type)
     out = []
     data = fleet()
@@ -135,7 +136,7 @@ def acknowledge(alert_service, alert_id, body, now):
     return 200, alert.to_doc()
 
 
-FAULT_SCENARIOS = ("none", "compressor", "door", "delay", "offline")  # same list as the simulator (FR-02)
+FAULT_SCENARIOS = ("none", "compressor", "humidity", "door", "delay", "offline")  # same list as the simulator (FR-02)
 
 
 def faults_view(repo):

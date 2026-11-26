@@ -30,3 +30,12 @@ test('an email whose retries were stopped is not shown as still queued', () => {
   render(<AlertHistory alerts={[stopped]} onAcknowledge={() => {}} user="x" />);
   expect(screen.getByText(/not delivered · retries stopped/)).toBeInTheDocument();
 });
+
+test('a text message is described by its real state, and only for alerts that have one', () => {
+  const texted = { ...alerts[0], id: 'alt-9', sms_status: 'requested' };
+  const { unmount } = render(<AlertHistory alerts={[texted]} onAcknowledge={() => {}} />);
+  expect(screen.getByText('Text message: requested from the provider')).toBeInTheDocument();
+  unmount();
+  render(<AlertHistory alerts={[alerts[1]]} onAcknowledge={() => {}} />);
+  expect(screen.queryByText(/Text message/)).toBeNull();
+});

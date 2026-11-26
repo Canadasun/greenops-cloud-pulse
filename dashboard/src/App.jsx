@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { api, usePolling } from './api';
 import useLocation from './hooks/useLocation';
-import OperatorAccess from './components/OperatorAccess';
+import SignInGate, { Account } from './components/SignIn';
 import { ClockProvider, ErrorBoundary } from './components/UI';
 import OverviewPage from './pages/OverviewPage';
 import FleetPage from './pages/FleetPage';
@@ -10,8 +10,8 @@ import SystemPage from './pages/SystemPage';
 import TruckDetail from './components/TruckDetail';
 import QueryState from './components/QueryState';
 const titles = { overview: 'Operations overview', fleet: 'Fleet workspace', alerts: 'Incident centre', system: 'System & simulation' };
-function Dashboard() {
-  const [params, change] = useLocation(), [identity, setIdentity] = useState(null);
+function Dashboard({ session }) {
+  const [params, change] = useLocation(), identity = session.can_operate ? session.user : null;
   const raw = params.get('view'), view = raw === 'map' ? 'fleet' : titles[raw] ? raw : 'overview';
   const inspecting = params.get('inspect') === '1' || !!params.get('truck');
   const trucks = usePolling(api.trucks, 5000), open = usePolling(opts => api.alerts({ status: 'OPEN' }, opts), 5000);
@@ -48,7 +48,7 @@ function Dashboard() {
   const pageProps = { ...shared, params: backgroundParams };
   const contextIncident = open.data?.items.find(a => a.id === params.get('incident')) || returnState.current?.incident;
   return <div className={`app view-${view}`}><a className="skip-link" href="#main">Skip to dashboard</a>
-    <header><a className="brand" href="?view=overview" onClick={e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) { e.preventDefault(); navigate('overview'); } }}><span className="logo" aria-hidden="true">GO</span><span>GreenOps <span className="brand-light">Cloud Pulse</span><small>Fleet operations · Cold-chain monitoring</small></span></a><OperatorAccess identity={identity} onIdentity={setIdentity} /></header>
+    <header><a className="brand" href="?view=overview" onClick={e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) { e.preventDefault(); navigate('overview'); } }}><span className="logo" aria-hidden="true">GO</span><span>GreenOps <span className="brand-light">Cloud Pulse</span><small>Fleet operations · Cold-chain monitoring</small></span></a><Account session={session} /></header>
     <nav className="main-nav" aria-label="Dashboard views">{Object.entries(titles).map(([key]) => <a key={key} href={`?view=${key}`} aria-current={view === key ? 'page' : undefined} onClick={e => { if (!e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) { e.preventDefault(); navigate(key); } }}>{({ overview: 'Overview', fleet: 'Fleet', alerts: 'Incidents', system: 'System' })[key]}{key === 'alerts' && open.data && <span className="nav-count">{open.data.items.filter(a => a.status === 'ACTIVE').length}<span className="sr-only"> needing action</span></span>}</a>)}</nav>
     <main id="main" tabIndex="-1"><div className="page-heading"><div><p className="eyebrow">Live operations</p><h1 ref={heading} tabIndex="-1">{inspecting ? `${params.get('truck')} · Truck details` : titles[view]}</h1></div><span className={`connection ${trucks.error ? 'error' : ''}`}>{trucks.error ? 'Fleet API interrupted' : trucks.data ? 'Fleet API connected' : 'Connecting to fleet API…'}</span></div>
       <div hidden={inspecting}>{backgroundView === 'overview' ? <OverviewPage {...pageProps} /> : ['fleet', 'map'].includes(backgroundView) ? <FleetPage {...pageProps} /> : backgroundView === 'alerts' ? <IncidentsPage {...pageProps} /> : <SystemPage identity={identity} />}</div>
@@ -56,4 +56,4 @@ function Dashboard() {
     </main><footer>GreenOps Cloud Pulse · Fleet and incidents refresh every 5 seconds while this tab is visible. Times use your device’s timezone unless labelled UTC.</footer>
   </div>;
 }
-export default function App() { return <ErrorBoundary><ClockProvider><Dashboard /></ClockProvider></ErrorBoundary>; }
+export default function App() { return <ErrorBoundary><ClockProvider><SignInGate>{session => <Dashboard session={session} />}</SignInGate></ClockProvider></ErrorBoundary>; }

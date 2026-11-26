@@ -1,4 +1,5 @@
 import { parseTrucks, parseHistory, parseAlerts, parseRoutes, parseHealth, parseSession, parseFaults, parseIncident } from './contracts';
+import { getToken } from './session';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function endpoints(apiBase = '') {
@@ -6,8 +7,6 @@ export function endpoints(apiBase = '') {
   return { api: `${base}/api`, sim: `${base}/api/sim` };
 }
 const { api: API, sim: SIM } = endpoints(import.meta.env.VITE_API_BASE || '');
-let operatorKey = '';
-export function setOperatorKey(key) { operatorKey = key; }
 
 export async function request(path, options = {}) {
   const controller = new AbortController();
@@ -16,10 +15,11 @@ export async function request(path, options = {}) {
   if (options.signal?.aborted) controller.abort();
   const timer = setTimeout(abort, 12000);
   try {
-    const res = await fetch(path, { ...options, signal: controller.signal, headers: {
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...(operatorKey ? { Authorization: `Bearer ${operatorKey}` } : {}), ...options.headers,
+    const send = async token => fetch(path, { ...options, signal: controller.signal, headers: {
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${token}`, ...options.headers,
     } });
+    let res = await send(await getToken());
+    if (res.status === 401) res = await send(await getToken({ renew: true })); // expired while the laptop slept: renew once
     const body = await res.json().catch(() => { throw new Error('The server returned an unreadable response.'); });
     if (!res.ok) throw new Error(body.error || `Request failed (${res.status})`);
     return body;

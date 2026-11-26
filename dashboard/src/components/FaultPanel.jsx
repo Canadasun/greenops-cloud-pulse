@@ -1,5 +1,5 @@
 import { useState } from 'react';
-const OPTIONS = [['none', 'Normal'], ['compressor', 'Compressor failure'], ['door', 'Door left open'], ['delay', 'Traffic delay'], ['offline', 'Go offline']];
+const OPTIONS = [['none', 'Normal'], ['compressor', 'Compressor failure'], ['humidity', 'Humidity rise'], ['door', 'Door left open'], ['delay', 'Traffic delay'], ['offline', 'Go offline']];
 export default function FaultPanel({ faults, onChange, canOperate = false }) {
   const [pending, setPending] = useState({});
   const [notice, setNotice] = useState(null);
@@ -12,7 +12,7 @@ export default function FaultPanel({ faults, onChange, canOperate = false }) {
   if (!faults) return null;
   return <>
     <p className="muted">Demo controls change simulated truck conditions. Sensors update on the next reading.</p>
-    {!canOperate && <p>Connect an operator key to change scenarios.</p>}
+    {!canOperate && <p>Your account can view only. Operators can change scenarios.</p>}
     {notice && <p role={notice.error ? 'alert' : 'status'} className={notice.error ? 'error' : 'success'}>{notice.text}</p>}
     <div className="faults">{Object.entries(faults).map(([id, scenario]) => <label key={id}>
       <span>{id}{pending[id] != null && <span className="small"> · Applying…</span>}</span>

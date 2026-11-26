@@ -57,15 +57,15 @@ export function parseHealth(value: unknown): Health {
   if (typeof h.capacity_warning !== 'boolean') invalid();
   return h as unknown as Health;
 }
-export function parseSession(value: unknown): { can_operate: boolean; user: string | null } {
+export function parseSession(value: unknown): { can_operate: boolean; user: string } {
   const s = object(value);
   if (typeof s.can_operate !== 'boolean') invalid();
-  if (s.can_operate) string(s.user);
-  return s as { can_operate: boolean; user: string | null };
+  string(s.user);
+  return s as { can_operate: boolean; user: string };
 }
 export function parseFaults(value: unknown): Record<string, string> {
   const faults = object(value);
-  for (const scenario of Object.values(faults)) if (!['none', 'compressor', 'door', 'delay', 'offline'].includes(string(scenario))) invalid();
+  for (const scenario of Object.values(faults)) if (!['none', 'compressor', 'humidity', 'door', 'delay', 'offline'].includes(string(scenario))) invalid();
   return faults as Record<string, string>;
 }
 export function parseIncident(value: unknown): Incident {

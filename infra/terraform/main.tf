@@ -1,7 +1,8 @@
 # GreenOps Cloud Pulse on Azure (Part 2, Figure 7). Owner: Marcelbriaud Wafotchoupe (Role 2), with each service's role owner.
 locals {
-  name = "greenops-${var.env}-${var.name_suffix}"
-  tags = { project = "greenops-cloud-pulse", env = var.env, course = "CST8922" }
+  sms_enabled = length(var.sms_phones) > 0
+  name        = "greenops-${var.env}-${var.name_suffix}"
+  tags        = { project = "greenops-cloud-pulse", env = var.env, course = "CST8922" }
 }
 
 resource "azurerm_resource_group" "rg" {
@@ -9,6 +10,17 @@ resource "azurerm_resource_group" "rg" {
   location = var.location
   # Azure tag names ignore case, so a policy tag (e.g. "Course") replaces the project tag of the same name
   tags = merge({ for k, v in local.tags : k => v if !contains([for t in keys(var.rg_tags) : lower(t)], lower(k)) }, var.rg_tags)
+}
+
+# ---- Secrets created and kept by Terraform (its state is private); nobody has to invent or copy them
+resource "random_password" "session_key" {
+  length  = 64
+  special = false
+}
+
+resource "random_password" "faults_read" {
+  length  = 48
+  special = false
 }
 
 # ---- Ingestion (Role 2): IoT Hub with routing to the built-in endpoint (Alert Function) and the archive
@@ -195,7 +207,7 @@ resource "azurerm_function_app_flex_consumption" "func" {
   site_config {
     application_insights_connection_string = azurerm_application_insights.appi.connection_string
     cors {
-      allowed_origins = ["https://${azurerm_static_web_app.dashboard.default_host_name}", "http://localhost:5173"]
+      allowed_origins = ["https://${azurerm_static_web_app.dashboard.default_host_name}"]
     }
   }
   app_settings = {
@@ -204,7 +216,10 @@ resource "azurerm_function_app_flex_consumption" "func" {
     IOTHUB_EVENTS           = "Endpoint=${azurerm_iothub.hub.event_hub_events_endpoint};SharedAccessKeyName=iothubowner;SharedAccessKey=${azurerm_iothub.hub.shared_access_policy[0].primary_key};EntityPath=${azurerm_iothub.hub.event_hub_events_path}"
     IOTHUB_EVENTHUB_NAME    = azurerm_iothub.hub.event_hub_events_path
     COSMOS_ENDPOINT         = azurerm_cosmosdb_account.db.endpoint
-    OPERATOR_TOKENS         = jsonencode(var.operator_tokens)
+    SESSION_SIGNING_KEY     = random_password.session_key.result # shared with the dashboard's /api/token function only
+    OPERATOR_EMAILS         = jsonencode(var.operator_emails)
+    FAULTS_READ_TOKEN       = random_password.faults_read.result
+    SMS_URL                 = local.sms_enabled ? azurerm_logic_app_trigger_http_request.sms[0].callback_url : ""
     DELIVERY_CALLBACK_TOKEN = var.delivery_callback_token
     IOT_HUB_SKU             = var.iot_hub_sku
     IOT_HUB_MONTHLY_USD     = tostring(var.iot_hub_monthly_usd)
@@ -319,6 +334,7 @@ resource "azurerm_static_web_app" "dashboard" {
   location            = "eastus2" # Static Web Apps is offered in a few regions; it only serves the static files
   sku_tier            = "Free"
   sku_size            = "Free"
+  app_settings        = { SESSION_SIGNING_KEY = random_password.session_key.result } # read by swa-api (/api/token)
   tags                = local.tags
 }
 

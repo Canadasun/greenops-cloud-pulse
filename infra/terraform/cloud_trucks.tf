@@ -62,6 +62,11 @@ resource "azurerm_container_app_job" "trucks" {
     replica_completion_count = 1
   }
 
+  secret {
+    name  = "faults-read-token"
+    value = random_password.faults_read.result
+  }
+
   template {
     container {
       name    = "trucks"
@@ -77,6 +82,10 @@ resource "azurerm_container_app_job" "trucks" {
       env {
         name  = "FAULTS_URL"
         value = "https://${azurerm_function_app_flex_consumption.func.default_hostname}/api/sim/trucks"
+      }
+      env {
+        name        = "FAULTS_READ_TOKEN"
+        secret_name = "faults-read-token"
       }
       env {
         name  = "FAULTS_POLL_S"

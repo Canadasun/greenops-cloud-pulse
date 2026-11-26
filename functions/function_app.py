@@ -18,7 +18,7 @@ from shared.alert_service import AlertService
 from shared.alerting import process_batch
 from shared.fleet_watcher import check_fleet
 from shared.models import utcnow
-from shared.auth import operator, service_authorized
+from shared.auth import guard, needs_operator, needs_viewer, operator, service_authorized, viewer
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 log = logging.getLogger("greenops")
@@ -39,12 +39,17 @@ def repo():
 
 @lru_cache
 def alert_service():
-    from shared.notifier import LogicAppNotifier
-    return AlertService(repo(), LogicAppNotifier())
+    from shared.notifier import LogicAppNotifier, SmsNotifier
+    return AlertService(repo(), LogicAppNotifier(), SmsNotifier.from_env())
 
 
 def _json(body, status=200):
     return func.HttpResponse(json.dumps(body, default=str), status_code=status, mimetype="application/json")
+
+
+signed_in = guard(_json, needs_viewer)
+operators_only = guard(_json, needs_operator)
+signed_in_or_truck = guard(_json, lambda req: needs_viewer(req, "FAULTS_READ_TOKEN"))
 
 
 # ---------- Alert Function (Role 3) ----------
@@ -81,16 +86,19 @@ def fleet_watcher(timer: func.TimerRequest):
 
 # ---------- Fleet API (Role 5) ----------
 @app.route(route="trucks", methods=["GET"])
+@signed_in
 def get_trucks(req: func.HttpRequest) -> func.HttpResponse:
     return _json(api.trucks_view(repo(), utcnow()))
 
 
 @app.route(route="routes", methods=["GET"])
+@signed_in
 def get_routes(req: func.HttpRequest) -> func.HttpResponse:
     return _json(api.routes_view())
 
 
 @app.route(route="trucks/{truck_id}/history", methods=["GET"])
+@signed_in
 def get_history(req: func.HttpRequest) -> func.HttpResponse:
     try:
         hours = float(req.params.get("hours", "1"))
@@ -119,6 +127,7 @@ def get_history(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.route(route="alerts", methods=["GET"])
+@signed_in
 def get_alerts(req: func.HttpRequest) -> func.HttpResponse:
     try:
         limit = int(req.params.get("limit", "50"))
@@ -136,33 +145,28 @@ def get_alerts(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.route(route="alerts/{alert_id}/ack", methods=["POST"])
+@operators_only
 def ack_alert(req: func.HttpRequest) -> func.HttpResponse:
-    user = operator(req)
-    if not user:
-        return _json({"error": "operator credential required"}, 401)
-    try:
-        body = req.get_json()
-    except ValueError:
-        body = {}
-    code, out = api.acknowledge(alert_service(), req.route_params["alert_id"], {"user": user}, utcnow())
+    code, out = api.acknowledge(alert_service(), req.route_params["alert_id"], {"user": operator(req)}, utcnow())
     return _json(out, code)
 
 
 @app.route(route="health", methods=["GET"])
+@signed_in
 def get_health(req: func.HttpRequest) -> func.HttpResponse:
     return _json(api.health_view(repo(), utcnow()))
 
 
 # ---------- Demo fault panel on Azure (Role 1 + Role 5): the dashboard writes, the trucks poll ----------
 @app.route(route="sim/trucks", methods=["GET"])
+@signed_in_or_truck
 def get_faults(req: func.HttpRequest) -> func.HttpResponse:
     return _json(api.faults_view(repo()))
 
 
 @app.route(route="sim/trucks/{truck_id}/fault", methods=["POST"])
+@operators_only
 def set_fault(req: func.HttpRequest) -> func.HttpResponse:
-    if not operator(req):
-        return _json({"error": "operator credential required"}, 401)
     try:
         body = req.get_json()
     except ValueError:
@@ -172,17 +176,17 @@ def set_fault(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.route(route="sim/trucks/{truck_id}/fault", methods=["DELETE"])
+@operators_only
 def clear_fault(req: func.HttpRequest) -> func.HttpResponse:
-    if not operator(req):
-        return _json({"error": "operator credential required"}, 401)
     code, out = api.set_fault(repo(), req.route_params["truck_id"], {"scenario": "none"})
     return _json(out, code)
 
 
 @app.route(route="session", methods=["GET"])
+@signed_in
 def get_session(req: func.HttpRequest) -> func.HttpResponse:
-    user = operator(req)
-    return _json({"user": user, "can_operate": bool(user)})
+    name = operator(req)
+    return _json({"user": name or viewer(req) or "test viewer", "can_operate": bool(name)})
 
 
 @app.route(route="alerts/{alert_id}/delivery", methods=["POST"])

@@ -55,14 +55,23 @@ variable "cosmos_serverless" {
   default     = false
 }
 
-variable "operator_tokens" {
-  description = "Secret access key -> operator name. Empty means all operator writes are disabled. Never put keys in frontend build variables."
+variable "operator_emails" {
+  description = "Microsoft account email -> display name of the people who may acknowledge alerts and set demo faults. Everyone else who signs in can only view."
+  type        = map(string)
+  default     = {}
+  validation {
+    condition     = alltrue([for email, name in var.operator_emails : can(regex("^[^@ ]+@[^@ ]+$", email)) && length(trimspace(name)) > 0])
+    error_message = "Map each operator's email address to a nonempty name."
+  }
+}
+variable "sms_phones" {
+  description = "Label -> Canadian or US mobile number (10 digits) that receives cargo-emergency texts. Empty = SMS off. Keep it in azure.auto.tfvars only."
   type        = map(string)
   sensitive   = true
   default     = {}
   validation {
-    condition     = alltrue([for key, name in var.operator_tokens : length(key) >= 32 && length(trimspace(name)) > 0])
-    error_message = "Operator keys must be at least 32 characters and map to a nonempty name."
+    condition     = alltrue([for n in values(var.sms_phones) : can(regex("^[0-9]{10}$", n))])
+    error_message = "Use 10 digits without spaces, for example 6135550123."
   }
 }
 variable "delivery_callback_token" {

@@ -8,6 +8,7 @@ Environment variables (all optional):
   CONTROL_PORT            port of the fault-control API (default 8090)
   IOTHUB_HOSTNAME         set to <hub>.azure-devices.net to send to Azure IoT Hub instead of the local broker
   FAULTS_URL              on Azure: the Fleet API's /api/sim/trucks, polled for faults chosen on the dashboard
+  FAULTS_READ_TOKEN       the trucks' own credential for that address
   FAULTS_POLL_S           seconds between those polls (default 3; each poll is a billed Function call)
   RUN_FOR_S               stop after this many seconds (the Azure Container Apps job); unset = run until stopped
 """
@@ -132,11 +133,17 @@ def apply_remote_faults(faults, remote, valid_trucks):
             faults[truck_id] = scenario
 
 
+def faults_request(url):
+    """The Fleet API answers only callers with a credential (F12); the trucks have their own, which can read faults and nothing else."""
+    token = os.getenv("FAULTS_READ_TOKEN", "")
+    return urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"} if token else {})
+
+
 def poll_faults(url, faults, valid_trucks, every_s=3):
     """On Azure the dashboard cannot reach this PC, so the trucks fetch their faults from the Fleet API."""
     while True:
         try:
-            with urllib.request.urlopen(url, timeout=10) as r:
+            with urllib.request.urlopen(faults_request(url), timeout=10) as r:
                 apply_remote_faults(faults, json.loads(r.read()), valid_trucks)
         except (OSError, ValueError) as e:
             log.warning("cannot read faults from %s (%s)", url, e)

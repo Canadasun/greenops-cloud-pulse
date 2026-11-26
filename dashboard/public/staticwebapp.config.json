@@ -1,6 +1,16 @@
 {
+  "platform": { "apiRuntime": "node:22" },
+  "routes": [
+    { "route": "/.auth/login/github", "statusCode": 404 },
+    { "route": "/.auth/login/twitter", "statusCode": 404 },
+    { "route": "/api/token", "methods": ["GET"], "allowedRoles": ["authenticated"] }
+  ],
+  "navigationFallback": { "rewrite": "/index.html", "exclude": ["/assets/*", "/api/*"] },
   "globalHeaders": {
-    "Referrer-Policy": "strict-origin-when-cross-origin"
-  },
-  "navigationFallback": { "rewrite": "/index.html" }
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "geolocation=(), camera=(), microphone=()",
+    "Content-Security-Policy": "default-src 'self'; connect-src 'self' https://*.azurewebsites.net; img-src 'self' data: https://tile.openstreetmap.org; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  }
 }

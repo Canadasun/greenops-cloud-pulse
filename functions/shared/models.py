@@ -56,6 +56,12 @@ class Alert:
     email_error: str | None = None
     email_accepted_at: str | None = None
     email_workflow_id: str | None = None
+    sms_status: str | None = None  # None = not texted; pending, sending, requested, failed, abandoned or cancelled
+    sms_attempts: int = 0
+    sms_next_attempt: str | None = None
+    sms_claim: str | None = None
+    sms_claim_until: str | None = None
+    sms_requested_at: str | None = None
 
     def to_doc(self) -> dict:
         return {**asdict(self), "doc_type": "alert"}

@@ -8,6 +8,7 @@ services:
     environment:
       IOTHUB_HOSTNAME: ${IOTHUB_HOSTNAME:?run scripts/start_azure_trucks.sh}
       FAULTS_URL: ${FUNCTION_URL:?run scripts/start_azure_trucks.sh}/api/sim/trucks
+      FAULTS_READ_TOKEN: ${FAULTS_READ_TOKEN:?run scripts/start_azure_trucks.sh}
       INTERVAL_S: ${INTERVAL_S:-10}
       JOURNEY_S: ${JOURNEY_S:-1800}
     volumes:

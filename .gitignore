@@ -24,3 +24,5 @@ test-results/
 *.tfvars
 *.tfplan
 infra/terraform/plan*.txt
+load/contracts-*/
+e2e/artifacts/

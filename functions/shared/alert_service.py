@@ -10,7 +10,7 @@ import time
 from datetime import timedelta
 
 from .models import Alert, AlertStatus, iso, parse, utcnow
-from .repository import notification_due
+from .repository import notification_due, sms_due
 
 log = logging.getLogger('alerts')
 
@@ -18,6 +18,8 @@ log = logging.getLogger('alerts')
 class AlertService:
     # A refusing provider (e.g. email throttling) is retried with growing waits, then given up on: no endless resends.
     MAX_EMAIL_ATTEMPTS = int(os.getenv('EMAIL_MAX_ATTEMPTS', '8'))
+    MAX_SMS_ATTEMPTS = 3
+    SMS_TYPES = ('TEMPERATURE', 'HUMIDITY')  # cargo at risk right now; everything else is email only
 
     @staticmethod
     def _next_attempt(attempts, now):
@@ -29,15 +31,16 @@ class AlertService:
         else:
             alert.email_status, alert.email_next_attempt = 'failed', self._next_attempt(alert.email_attempts, now)
 
-    def __init__(self, repo, notifier):
-        self.repo, self.notifier = repo, notifier
+    def __init__(self, repo, notifier, sms=None):
+        self.repo, self.notifier, self.sms = repo, notifier, sms
 
-    @staticmethod
-    def raise_in(tx, alert_type, details, now, event_at=None):
+    def raise_in(self, tx, alert_type, details, now, event_at=None):
         alert = tx.find_open(alert_type)
         new = alert is None
         if new:
             alert = Alert(tx.truck_id, alert_type, details, iso(event_at or now), iso(now))
+            if self.sms and alert_type in self.SMS_TYPES:
+                alert.sms_status = 'pending'
         else:
             alert.last_seen_at, alert.details = iso(now), details
         tx.save_alert(alert)
@@ -55,6 +58,8 @@ class AlertService:
     def raise_or_update(self, truck_id, alert_type, details, now):
         alert, new = self.repo.mutate_truck(truck_id, lambda tx: self.raise_in(tx, alert_type, details, now))
         self.deliver(alert.id, now)
+        if self.sms:
+            self.deliver_sms(alert.id, now)
         return self.repo.get_alert(alert.id), new
 
     def resolve(self, truck_id, alert_type, now):
@@ -75,7 +80,54 @@ class AlertService:
 
     def retry_notifications(self, now):
         for alert in self.repo.pending_notifications(now):
-            self.deliver(alert.id, now)
+            if notification_due(alert, now):
+                self.deliver(alert.id, now)
+            if self.sms and sms_due(alert, now):
+                self.deliver_sms(alert.id, now)
+
+    def deliver_sms(self, alert_id, now):
+        """Text the on-call phones once: claim, send outside the transaction, record the result."""
+        original = self.repo.get_alert(alert_id)
+        if not original:
+            return
+        claim_id = uuid.uuid4().hex
+
+        def claim(tx):
+            alert = tx.get_alert(alert_id)
+            if not sms_due(alert, now):
+                return None
+            if alert.status == AlertStatus.RESOLVED.value:  # the cargo is safe again: a late text would only cause alarm
+                alert.sms_status, alert.sms_next_attempt = 'cancelled', None
+                tx.save_alert(alert)
+                return None
+            alert.sms_status, alert.sms_claim = 'sending', claim_id
+            alert.sms_claim_until = iso(now + timedelta(minutes=2))
+            alert.sms_attempts += 1
+            tx.save_alert(alert)
+            return alert
+        alert = self.repo.mutate_truck(original.truck_id, claim)
+        if not alert:
+            return
+        try:
+            self.sms.send(alert)
+            ok = True
+        except Exception as e:
+            ok = False
+            log.warning('sms %s attempt %s failed: %s', alert.id, alert.sms_attempts, e)
+
+        def finish(tx):
+            current = tx.get_alert(alert_id)
+            if current.sms_claim != claim_id:
+                return
+            current.sms_claim = current.sms_claim_until = current.sms_next_attempt = None
+            if ok:
+                current.sms_status, current.sms_requested_at = 'requested', iso(now)
+            elif current.sms_attempts >= self.MAX_SMS_ATTEMPTS:
+                current.sms_status = 'abandoned'
+            else:
+                current.sms_status, current.sms_next_attempt = 'failed', self._next_attempt(current.sms_attempts, now)
+            tx.save_alert(current)
+        self.repo.mutate_truck(original.truck_id, finish)
 
     def deliver(self, alert_id, now):
         original = self.repo.get_alert(alert_id)

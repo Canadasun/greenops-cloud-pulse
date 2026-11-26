@@ -3,7 +3,10 @@ const { default: AxeBuilder } = require('../dashboard/node_modules/@axe-core/pla
 const { startApi } = require('./browser_server.cjs');
 const assert = require('node:assert/strict');
 const http = require('http'), fs = require('fs'), path = require('path');
-const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/audit-2026-10-10/implemented');
+const root = path.resolve(__dirname, '..'), artifacts = path.join(__dirname, 'artifacts');
+// One random key for this run, shared by the real token code (Node) and the real Fleet API (Python).
+process.env.SESSION_SIGNING_KEY = require('crypto').randomBytes(32).toString('hex');
+const { handle: localAuth } = require('../local-auth/server.js');
 (async () => {
   fs.mkdirSync(artifacts, { recursive: true });
   await assert.rejects(startApi(process.execPath, ['-e', 'process.exit(2)']).ready, /before readiness/);
@@ -14,6 +17,7 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
   try {
     const port = await api.ready;
     server = http.createServer((req, res) => {
+      if (req.url.startsWith('/.auth/') || req.url === '/api/token') return localAuth(req, res);
       if (req.url.startsWith('/api/')) {
         const proxy = http.request(`http://127.0.0.1:${port}${req.url}`, { method: req.method, headers: req.headers }, r => { res.writeHead(r.statusCode, r.headers); r.pipe(res); });
         proxy.on('error', () => { res.writeHead(502); res.end('{}'); }); req.pipe(proxy); return;
@@ -39,27 +43,34 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
       const dimensions = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth }));
       assert(dimensions.scroll <= dimensions.width + 1, `${name}: horizontal overflow ${JSON.stringify(dimensions)}`);
     };
-    await goto('view=overview');
-    await page.getByRole('button', { name: 'Acknowledge TRK-001 TEMPERATURE' }).waitFor();
+    const signIn = async email => { await page.goto(`${url}/.auth/login/aad?as=${encodeURIComponent(email)}&post_login_redirect_uri=/`); await page.locator('.connection').filter({ hasText: 'Fleet API connected' }).waitFor(); };
+    const apiGet = async p => { const { token } = await (await page.request.get(`${url}/api/token`)).json(); return (await page.request.get(`${url}${p}`, { headers: { Authorization: `Bearer ${token}` } })).json(); };
+    // F12: without a session there is a sign-in page, no fleet data, and the API refuses a direct request.
+    const anonymous = []; page.on('request', r => { if (/\/api\/(?!token)/.test(r.url())) anonymous.push(r.url()); });
+    await page.goto(`${url}/`); await page.getByRole('link', { name: 'Sign in with Microsoft' }).waitFor();
+    assert.deepEqual(anonymous, [], 'data was requested before sign-in');
+    for (const p of ['/api/trucks', '/api/alerts', '/api/health', '/api/sim/trucks', '/api/session']) assert.equal((await page.request.get(url + p)).status(), 401, p);
+    await scan('sign-in page');
+    await page.setViewportSize({ width: 320, height: 700 }); await scan('320px sign-in page'); await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: path.join(artifacts, 'sign-in.png') });
+    await page.getByRole('link', { name: 'Sign in with Microsoft' }).click(); await page.getByRole('link', { name: /Local visitor/ }).click();
+    await page.getByText('View only').waitFor();
     assert(await page.getByRole('button', { name: 'Acknowledge TRK-001 TEMPERATURE' }).isDisabled());
+    assert.equal((await page.request.post(`${url}/api/sim/trucks/TRK-001/fault`, { data: { scenario: 'door' }, headers: { Authorization: `Bearer ${(await (await page.request.get(`${url}/api/token`)).json()).token}` } })).status(), 403);
     await page.keyboard.press('Tab');
     assert.equal(await page.evaluate(() => document.activeElement.textContent), 'Skip to dashboard');
     await page.keyboard.press('Enter');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'main');
-    await scan('desktop overview read-only');
+    await scan('desktop overview, view only');
     await page.screenshot({ path: path.join(artifacts, 'desktop-overview.png'), fullPage: true });
-    await page.getByText('Read-only · Connect operator').click();
-    await scan('expanded operator access');
-    await page.getByLabel('Operator access key').fill('bad-key'); await page.getByRole('button', { name: 'Connect', exact: true }).click();
-    await page.getByRole('alert').waitFor(); await scan('operator error');
-    await page.getByLabel('Operator access key').fill('browser-test-key'); await page.getByRole('button', { name: 'Connect', exact: true }).click();
-    await page.getByText('Operator: Browser operator').waitFor();
+    await page.getByRole('link', { name: 'Sign out' }).click(); await page.getByRole('link', { name: 'Sign in with Microsoft' }).waitFor();
+    await signIn('dispatcher@greenops.local'); await page.getByText('Browser operator').waitFor();
     await page.getByRole('button', { name: 'Acknowledge TRK-001 TEMPERATURE' }).click();
     await page.getByRole('status').filter({ hasText: 'acknowledged' }).waitFor();
     // Focus moves on the next animation frame after the message renders, so wait for it rather than sampling once.
     await page.waitForFunction(() => document.activeElement?.className === 'action-feedback', null, { timeout: 5000 });
-    await page.locator('.brand').click(); await page.getByText('Operator: Browser operator').waitFor();
-    checks.push('operator gating, failed/successful connection, acknowledgement feedback/focus, brand preserves session');
+    await page.locator('.brand').click(); await page.getByText('Browser operator').waitFor();
+    checks.push('sign-in required, view-only and operator roles, sign-out, acknowledgement feedback/focus, brand preserves session');
     await page.getByRole('link', { name: 'Fleet', exact: true }).click();
     await page.getByLabel('Find a truck').pressSequentially('TRK-004');
     await page.goBack(); await page.getByRole('heading', { level: 1, name: 'Operations overview' }).waitFor();
@@ -147,7 +158,7 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
     await page.waitForFunction(() => document.activeElement.classList.contains('truck-row'));
     checks.push('32 responsive view states: overflow and axe, mobile keyboard inspection and return');
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await goto('view=system'); await page.getByText('Read-only · Connect operator').click(); await page.getByLabel('Operator access key').fill('browser-test-key'); await page.getByRole('button', { name: 'Connect', exact: true }).click(); await page.getByText('Operator: Browser operator').waitFor();
+    await goto('view=system'); await page.getByText('Browser operator').waitFor();
     await page.getByLabel('Fault scenario for TRK-001').selectOption('door'); await page.getByRole('status').filter({ hasText: 'scenario applied' }).waitFor();
     await scan('operator simulation changed');
     await page.getByLabel('Fault scenario for TRK-001').selectOption('none'); await page.getByRole('status').filter({ hasText: 'scenario applied' }).waitFor();
@@ -156,13 +167,13 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
     assert.equal(await page.getByText('No incidents reported in this view.').count(), 0);
     await scan('partial outage');
     await page.unroute('**/api/alerts?*');
-    const fleetResponse = await (await page.request.get(`${url}/api/trucks`)).json();
+    const fleetResponse = await apiGet('/api/trucks');
     const stale = fleetResponse.map(t => ({ ...t, last_seen: '2020-01-01T00:00:00Z' }));
     await page.route('**/api/trucks', route => route.fulfill({ json: stale }));
     await goto('view=overview'); await page.getByText('0 / 6', { exact: true }).waitFor();
     assert(await page.getByText(/Stale ·/).count() > 0); await scan('stale telemetry despite successful API');
     await page.unroute('**/api/trucks');
-    const incidentBase = (await (await page.request.get(`${url}/api/alerts?status=OPEN`)).json()).items[0];
+    const incidentBase = (await apiGet('/api/alerts?status=OPEN')).items[0];
     await page.route('**/api/alerts?*', route => route.fulfill({ json: { items: Array.from({ length: 25 }, (_, i) => ({ ...incidentBase, id: `test-${i}`, status: 'ACTIVE' })), next_cursor: null } }));
     await goto('view=alerts'); await page.waitForFunction(() => document.querySelectorAll('article.incident').length === 25);
     await scan('25 open incidents');
@@ -200,6 +211,10 @@ const root = path.resolve(__dirname, '..'), artifacts = path.join(root, 'docs/au
     await page.addStyleTag({ content: '* { line-height: 1.5 !important; letter-spacing: .12em !important; word-spacing: .16em !important } p { margin-bottom: 2em !important }' });
     await scan('320px reflow with increased text spacing');
     checks.push('malformed response recovery, empty/loading states and 320px text-spacing reflow');
+    await page.setViewportSize({ width: 1440, height: 1000 }); await goto('view=overview');
+    await context.clearCookies(); await page.route('**/api/trucks', route => route.fulfill({ status: 401, json: { error: 'sign in to view the fleet' } }));
+    await page.getByText(/Your session has ended/).waitFor(); await scan('session ended'); await page.unroute('**/api/trucks');
+    checks.push('a session that ends returns to the sign-in page');
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(artifacts, 'browser-results.json'), JSON.stringify({ passed: true, scans: scans.length, checks, errors }, null, 2));
     console.log(`Browser regressions passed; ${scans.length} axe scans have zero violations. Keyboard, focus, responsive, auth, incident, map and outage checks passed.`);

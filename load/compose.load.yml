@@ -1,0 +1,4 @@
+# Scale test: the same containers with a 100-truck reference file; only the reference data changes, not the architecture (NFR-04).
+services:
+  functions:
+    volumes: ["./load/contracts-100:/home/site/wwwroot/contracts:ro"]

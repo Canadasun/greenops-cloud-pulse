@@ -3,6 +3,7 @@ terraform {
   required_providers {
     azurerm = { source = "hashicorp/azurerm", version = "~> 4.0" }
     azapi   = { source = "Azure/azapi", version = "~> 2.0" }
+    random  = { source = "hashicorp/random", version = "~> 3.6" }
   }
   # Remote state (Part 4): backend "azurerm" { resource_group_name = "rg-greenops-tfstate" ... }
 }

@@ -25,12 +25,12 @@ def test_missing_fields_are_rejected():
 
 def test_send_uses_smtp():
     with mock.patch("smtplib.SMTP") as smtp:
-        relay.send(ALERT, host="mailpit", port=1025)
+        relay.send(relay.build_email(ALERT), host="mailpit", port=1025)
     smtp.assert_called_once_with("mailpit", 1025, timeout=10)
     smtp.return_value.__enter__.return_value.send_message.assert_called_once()
 
 
-def relay_request(monkeypatch, tmp_path, body, token='service-test'):
+def relay_request(monkeypatch, tmp_path, body, token='service-test', path='/'):
     import io
     import json
     from types import SimpleNamespace
@@ -38,7 +38,7 @@ def relay_request(monkeypatch, tmp_path, body, token='service-test'):
     replies=[]
     monkeypatch.setenv('MAIL_RELAY_TOKEN','service-test')
     monkeypatch.setenv('RECEIPTS_DB',str(tmp_path/'receipts.sqlite'))
-    handler=SimpleNamespace(headers={'Authorization':'Bearer '+token,'Content-Length':str(len(raw))},rfile=io.BytesIO(raw),_reply=lambda code,body:replies.append((code,body)))
+    handler=SimpleNamespace(path=path,headers={'Authorization':'Bearer '+token,'Content-Length':str(len(raw))},rfile=io.BytesIO(raw),_reply=lambda code,body:replies.append((code,body)))
     relay.Handler.do_POST(handler)
     return replies[0]
 
@@ -65,3 +65,25 @@ def test_relay_requires_service_credential(monkeypatch,tmp_path):
 
 def test_json_array_returns_client_error(monkeypatch,tmp_path):
     assert relay_request(monkeypatch,tmp_path,[])[0]==400
+
+
+# --- SMS stand-in (F13): the text appears in the local inbox, marked as SMS
+def test_sms_becomes_a_message_in_the_local_inbox():
+    m = relay.build_sms({"alert_id": "alt-1", "truck_id": "TRK-003", "type": "TEMPERATURE", "text": "GreenOps TRK-003 TEMPERATURE: 12.0 C"})
+    assert m["Subject"] == "[SMS] TRK-003" and m["To"] == "sms-on-call@greenops.local"
+    assert m.get_content().strip() == "GreenOps TRK-003 TEMPERATURE: 12.0 C"
+
+
+@pytest.mark.parametrize("bad", [{}, {"alert_id": "a", "truck_id": "T", "type": "X"}, {"alert_id": "a", "truck_id": "T", "type": "X", "text": "x" * 161}, []])
+def test_bad_sms_is_rejected(bad):
+    with pytest.raises(ValueError):
+        relay.build_sms(bad)
+
+
+def test_email_and_sms_for_the_same_alert_are_both_delivered_once(monkeypatch, tmp_path):
+    sender = mock.Mock(); monkeypatch.setattr(relay, "send", sender)
+    sms = {"alert_id": ALERT["alert_id"], "truck_id": "TRK-003", "type": "TEMPERATURE", "text": "GreenOps TRK-003"}
+    for _ in range(2):
+        assert relay_request(monkeypatch, tmp_path, ALERT)[0] == 200
+        assert relay_request(monkeypatch, tmp_path, sms, path="/sms")[0] == 200
+    assert sorted(c.args[0]["Subject"][:5] for c in sender.call_args_list) == ["[Gree", "[SMS]"]

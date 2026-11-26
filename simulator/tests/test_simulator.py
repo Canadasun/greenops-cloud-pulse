@@ -78,6 +78,36 @@ def test_compressor_failure_makes_the_temperature_rise_above_the_limit():  # FR-
     assert temps[-1] > 8 and temps == sorted(temps)
 
 
+@pytest.mark.parametrize("cargo,limit", [("vaccines", 75), ("fresh_produce", 95), ("frozen_food", 90)])
+def test_humidity_fault_breaches_every_cargo_limit_and_stays_physical(cargo, limit):  # FR-02, FR-06 (humidity half of F2)
+    truck, clock = make_truck(cargo=cargo)
+    truck.inject_fault("humidity")
+    values = []
+    for _ in range(40):
+        clock.advance(10)
+        values.append(truck.next_reading()["humidity_pct"])
+    assert values == sorted(values) and limit < values[-1] <= 100
+    # about five minutes is the longest wait before a demo alert
+    assert next(i for i, v in enumerate(values) if v > limit) <= 30
+
+
+def test_humidity_fault_leaves_the_temperature_in_range_and_recovers_gradually():
+    truck, clock = make_truck()
+    truck.inject_fault("humidity")
+    for _ in range(40):
+        clock.advance(10)
+        wet = truck.next_reading()
+        assert wet["temp_min_c"] <= wet["temp_c"] <= wet["temp_max_c"]
+    truck.clear_fault()
+    clock.advance(10)
+    first = truck.next_reading()["humidity_pct"]
+    assert wet["humidity_pct"] - 6 <= first < wet["humidity_pct"]  # dries out, it does not jump
+    for _ in range(20):
+        clock.advance(10)
+        last = truck.next_reading()["humidity_pct"]
+    assert last <= 75
+
+
 def test_door_fault_opens_the_door_and_clear_fault_recovers():
     truck, clock = make_truck()
     truck.inject_fault("door")
@@ -110,7 +140,7 @@ def test_unknown_fault_is_rejected():
     truck, _ = make_truck()
     with pytest.raises(ValueError):
         truck.inject_fault("meteor")
-    assert set(SCENARIOS) == {"none", "compressor", "door", "delay", "offline"}
+    assert set(SCENARIOS) == {"none", "compressor", "humidity", "door", "delay", "offline"}
 
 
 def test_topic_is_the_trucks_own_iot_hub_topic():  # FR-04

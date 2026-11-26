@@ -11,7 +11,7 @@ import os
 import sys
 root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root / 'functions'))
-os.environ['OPERATOR_TOKENS'] = json.dumps({'browser-test-key': 'Browser operator'})
+os.environ['OPERATOR_EMAILS'] = json.dumps({'dispatcher@greenops.local': 'Browser operator'})  # SESSION_SIGNING_KEY comes from browser_regressions.cjs
 import azure.functions as func
 import function_app as app
 from shared.repository import InMemoryFleetRepository

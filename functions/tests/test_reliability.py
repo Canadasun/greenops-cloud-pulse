@@ -10,7 +10,7 @@ from shared.alerting import process_batch
 from shared.fleet_watcher import check_fleet
 from shared.repository import InMemoryFleetRepository, CosmosFleetRepository
 from shared.models import Alert, iso, parse
-from shared import dashboard_api as api
+from shared import dashboard_api as api, session
 from test_alerting import reading, T0, FakeNotifier
 
 
@@ -139,22 +139,22 @@ def request(body=b'{}',params=None,token=''):
 
 def test_http_validation_and_authentication(monkeypatch):
     import function_app as app
-    monkeypatch.setenv('OPERATOR_TOKENS',json.dumps({'valid-key':'Actual operator'}))
+    key='k'*40;monkeypatch.setenv('SESSION_SIGNING_KEY',key);monkeypatch.setenv('OPERATOR_EMAILS',json.dumps({'op@example.ca':'Actual operator'}));valid=session.issue('op@example.ca',key)
     monkeypatch.setenv('REPOSITORY','memory');app.repo.cache_clear()
     for handler in [app.ack_alert,app.set_fault,app.clear_fault,app.alert_function,app.delivery_result]:
         assert handler(request()).status_code==401
     for val in ['NaN','abc','-1','25']:
-        assert app.get_history(request(params={'hours':val})).status_code==400
+        assert app.get_history(request(params={'hours':val},token=valid)).status_code==400
     for val in ['abc','0','101','-5']:
-        assert app.get_alerts(request(params={'limit':val})).status_code==400
-    assert app.set_fault(request(body=b'[1]',token='valid-key')).status_code==400
-    assert json.loads(app.get_session(request(token='valid-key')).get_body())['user']=='Actual operator'
+        assert app.get_alerts(request(params={'limit':val},token=valid)).status_code==400
+    assert app.set_fault(request(body=b'[1]',token=valid)).status_code==400
+    assert json.loads(app.get_session(request(token=valid)).get_body())['user']=='Actual operator'
     class Svc:
         def acknowledge(self,alert_id,user,now):
             assert user=='Actual operator'
             return None
     monkeypatch.setattr(app,'alert_service',lambda:Svc())
-    assert app.ack_alert(request(body=b'{"user":"spoof"}',token='valid-key')).status_code==409
+    assert app.ack_alert(request(body=b'{"user":"spoof"}',token=valid)).status_code==409
 
 
 def test_repeated_cloud_trigger_has_one_workflow_dispatch(store):

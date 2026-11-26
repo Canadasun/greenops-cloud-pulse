@@ -134,3 +134,11 @@ def test_parked_reading_matches_the_telemetry_contract():
     pub = FakePublisher()
     park(truck, pub)
     jsonschema.validate(pub.sent[0][1], json.loads((CONTRACTS / "telemetry.schema.json").read_text()))
+
+
+def test_fault_polling_uses_the_trucks_own_credential(monkeypatch):  # F12: the Fleet API has no anonymous readers
+    from greenops_sim.runner import faults_request
+    monkeypatch.setenv("FAULTS_READ_TOKEN", "t" * 32)
+    assert faults_request("http://x/api/sim/trucks").get_header("Authorization") == "Bearer " + "t" * 32
+    monkeypatch.delenv("FAULTS_READ_TOKEN")
+    assert faults_request("http://x/api/sim/trucks").get_header("Authorization") is None

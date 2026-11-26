@@ -57,6 +57,12 @@ jobs:
           cd functions && COSMOS_ENDPOINT=http://localhost:8081 python -m pytest -v
       - name: Mail relay tests
         run: cd mail-relay && python -m pytest -v
+      - uses: actions/setup-node@v4
+        with: { node-version: "22" }
+      - name: Sign-in API tests (including the Node and Python token contract)
+        run: cd swa-api && GREENOPS_PYTHON=python node --test
+      - name: Scale-test tools
+        run: python -m pytest -v load
 
   dashboard:            # Role 5 – Idowu Ayeni
     runs-on: ubuntu-latest
@@ -75,8 +81,18 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: GREENOPS_PYTHON=python npm run test:browser
 
+  infrastructure:       # Role 2 – Marcelbriaud Wafotchoupe
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: infra/terraform } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive
+      - run: terraform init -backend=false -input=false
+      - run: terraform validate
+
   end-to-end:           # all roles – the whole system in Docker
-    needs: [simulator, ingestion, functions, dashboard]
+    needs: [simulator, ingestion, functions, dashboard, infrastructure]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

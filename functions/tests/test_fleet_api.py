@@ -68,6 +68,7 @@ def test_fault_panel_lists_every_truck_and_validates_choices():  # Azure: dashbo
     repo, _, _ = setup()
     assert api.faults_view(repo) == {f"TRK-00{i}": "none" for i in range(1, 7)}
     assert api.set_fault(repo, "TRK-002", {"scenario": "delay"}) == (200, {"truck_id": "TRK-002", "scenario": "delay"})
+    assert api.set_fault(repo, "TRK-002", {"scenario": "humidity"})[0] == 200
     assert api.set_fault(repo, "TRK-999", {"scenario": "delay"})[0] == 404
     assert api.set_fault(repo, "TRK-002", {"scenario": "explode"})[0] == 400
     assert api.set_fault(repo, "TRK-002", {"scenario": "none"})[0] == 200 and api.faults_view(repo)["TRK-002"] == "none"
@@ -108,9 +109,10 @@ def test_parked_truck_shows_as_parked_until_it_sends_again():
     assert next(x for x in api.trucks_view(repo, now=later) if x["truck_id"] == "TRK-001")["status"] == "normal"
 
 
-def test_http_history_rejects_invalid_sampling_and_page_parameters():
+def test_http_history_rejects_invalid_sampling_and_page_parameters(monkeypatch):
     import azure.functions as func
     import function_app as app
+    monkeypatch.setenv('AUTH_MODE', 'open')  # the parameters are under test here, not the sign-in (test_sign_in.py)
     cases = [
         {'limit': '0'}, {'limit': '101'}, {'max_points': '99'},
         {'max_points': '2001'}, {'max_points': 'NaN'}, {'offset': '-1'},

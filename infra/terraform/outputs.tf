@@ -14,3 +14,12 @@ output "swa_deployment_token" {
   sensitive = true
 }
 output "truck_job" { value = azurerm_container_app_job.trucks.name }
+output "session_signing_key" {
+  description = "Only for the automated live checks, which sign a short session instead of using a person's Microsoft account"
+  value       = random_password.session_key.result
+  sensitive   = true
+}
+output "faults_read_token" {
+  value     = random_password.faults_read.result
+  sensitive = true
+}

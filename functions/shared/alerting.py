@@ -4,9 +4,11 @@ For each reading: store it (Role 4 repository), compare it with its cargo limits
 has been open (FR-07), then raise, update or resolve alerts through AlertService.
 """
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from .models import AlertType, parse, iso
 from .reference import cargo_profiles
+from .repository import PARALLEL_PARTITIONS
 from .validation import validate_reading
 
 DOOR_LIMIT_S = int(os.getenv("DOOR_LIMIT_S", "120"))
@@ -35,41 +37,51 @@ def process_batch(messages, repo, alerts, now):
         except (ValueError, TypeError, KeyError) as e:
             repo.quarantine_event(raw, str(e), now)
     readings.sort(key=lambda m: parse(m["timestamp"]))
-    readings = repo.save_readings(readings)
-    created = []
-    for msg in readings:
-        def apply(tx):
-            state = tx.state
-            t = parse(msg["timestamp"])
-            if state.get("last_seen") and t <= parse(state["last_seen"]):
-                return []  # history is retained, but current state and side effects cannot regress
-            previous = state.get("last_reading")
-            if msg["door_open"]:
-                state["door_open_since"] = state.get("door_open_since") or msg["timestamp"]
-                door_s = (t - parse(state["door_open_since"])).total_seconds()
-            else:
-                state["door_open_since"], door_s = None, None
-            state["last_seen"], state["last_reading"] = msg["timestamp"], msg
-            state.setdefault("activated_at", iso(now))
-            found = []
-            problems = evaluate(msg, door_s)
-            for kind in ("TEMPERATURE", "HUMIDITY", "DOOR_OPEN"):
-                if kind in problems:
-                    alert, new = alerts.raise_in(tx, kind, problems[kind], now, event_at=t)
-                    if new:
-                        found.append(alert)
-                else:
-                    alerts.resolve_in(tx, kind, now)
-            if (now - t).total_seconds() <= int(os.getenv("OFFLINE_AFTER_S", "300")):
-                alerts.resolve_in(tx, "OFFLINE", now)
-            if previous and previous["scheduled_eta"] != msg["scheduled_eta"]:
-                alerts.resolve_in(tx, "DELAYED", now)
-            # A planned end of run: the truck is parked, so the silence that follows is not a breakdown.
-            state["parked_at"] = msg["timestamp"] if msg.get("parked") else None
-            if msg.get("parked"):
-                alerts.resolve_in(tx, "OFFLINE", now)
-                alerts.resolve_in(tx, "DELAYED", now)
-            return found
-        created.extend(repo.mutate_truck(msg["truck_id"], apply))
+    by_truck = {}
+    for msg in repo.save_readings(readings):
+        by_truck.setdefault(msg["truck_id"], []).append(msg)
+    # One transaction per truck for the whole batch (a truck's readings stay in time order), different trucks in parallel.
+    with ThreadPoolExecutor(min(PARALLEL_PARTITIONS, max(1, len(by_truck)))) as pool:
+        results = pool.map(lambda item: repo.mutate_truck(item[0], lambda tx: apply_readings(tx, item[1], alerts, now)), by_truck.items())
+        created = [alert for found in results for alert in found]
     alerts.retry_notifications(now)
     return created
+
+
+def apply_readings(tx, msgs, alerts, now):
+    """Apply one truck's readings to its state, oldest first; returns the alerts that are new."""
+    return [alert for msg in msgs for alert in apply_reading(tx, msg, alerts, now)]
+
+
+def apply_reading(tx, msg, alerts, now):
+    state = tx.state
+    t = parse(msg["timestamp"])
+    if state.get("last_seen") and t <= parse(state["last_seen"]):
+        return []  # history is retained, but current state and side effects cannot regress
+    previous = state.get("last_reading")
+    if msg["door_open"]:
+        state["door_open_since"] = state.get("door_open_since") or msg["timestamp"]
+        door_s = (t - parse(state["door_open_since"])).total_seconds()
+    else:
+        state["door_open_since"], door_s = None, None
+    state["last_seen"], state["last_reading"] = msg["timestamp"], msg
+    state.setdefault("activated_at", iso(now))
+    found = []
+    problems = evaluate(msg, door_s)
+    for kind in ("TEMPERATURE", "HUMIDITY", "DOOR_OPEN"):
+        if kind in problems:
+            alert, new = alerts.raise_in(tx, kind, problems[kind], now, event_at=t)
+            if new:
+                found.append(alert)
+        else:
+            alerts.resolve_in(tx, kind, now)
+    if (now - t).total_seconds() <= int(os.getenv("OFFLINE_AFTER_S", "300")):
+        alerts.resolve_in(tx, "OFFLINE", now)
+    if previous and previous["scheduled_eta"] != msg["scheduled_eta"]:
+        alerts.resolve_in(tx, "DELAYED", now)
+    # A planned end of run: the truck is parked, so the silence that follows is not a breakdown.
+    state["parked_at"] = msg["timestamp"] if msg.get("parked") else None
+    if msg.get("parked"):
+        alerts.resolve_in(tx, "OFFLINE", now)
+        alerts.resolve_in(tx, "DELAYED", now)
+    return found

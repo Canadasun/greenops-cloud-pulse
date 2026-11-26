@@ -50,7 +50,9 @@ services:
       AzureWebJobsStorage: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;"
       FUNCTIONS_WORKER_RUNTIME: python
       TRIGGER_MODE: http
-      OPERATOR_TOKENS: ${OPERATOR_TOKENS:?run python3 scripts/init_local.py}
+      SESSION_SIGNING_KEY: ${SESSION_SIGNING_KEY:?run python3 scripts/init_local.py}
+      FAULTS_READ_TOKEN: ${FAULTS_READ_TOKEN:?run python3 scripts/init_local.py}
+      OPERATOR_EMAILS: '{"dispatcher@greenops.local": "Local dispatcher"}'
       INGESTION_TOKEN: ${INGESTION_TOKEN:?run python3 scripts/init_local.py}
       MAIL_RELAY_TOKEN: ${MAIL_RELAY_TOKEN:?run python3 scripts/init_local.py}
       DELIVERY_CALLBACK_TOKEN: ${DELIVERY_CALLBACK_TOKEN:?run python3 scripts/init_local.py}
@@ -58,6 +60,7 @@ services:
       OFFLINE_AFTER_S: ${OFFLINE_AFTER_S:-300}
       DOOR_LIMIT_S: ${DOOR_LIMIT_S:-120}
       LOGIC_APP_URL: http://mail-relay:8070/
+      SMS_URL: http://mail-relay:8070/sms
       ALERT_EMAIL_TO: cold-chain-ops@greenops.local
     restart: unless-stopped
 
@@ -76,8 +79,13 @@ services:
   # ---- Role 5 · Idowu – dashboard (Azure Static Web Apps stand-in)
   dashboard:
     build: ./dashboard
-    depends_on: [functions, simulator]
-    ports: ["5173:80"]
+    depends_on: [functions, simulator, local-auth]
+    ports: ["127.0.0.1:5173:80"]   # this computer only: the local sign-in below has sample people, not real accounts
+  local-auth:   # Static Web Apps sign-in stand-in
+    build: { context: ., dockerfile: local-auth/Dockerfile }
+    environment:
+      SESSION_SIGNING_KEY: ${SESSION_SIGNING_KEY:?run python3 scripts/init_local.py}
+    restart: unless-stopped
 
   # ---- Role 1 · Ying – truck simulator (fault API on 8090)
   simulator:
@@ -87,6 +95,7 @@ services:
     environment:
       MQTT_HOST: mosquitto
       FAULTS_URL: http://functions/api/sim/trucks
+      FAULTS_READ_TOKEN: ${FAULTS_READ_TOKEN:?run python3 scripts/init_local.py}
       SIM_CONTROL_TOKEN: ${SIM_CONTROL_TOKEN:?run python3 scripts/init_local.py}
       INTERVAL_S: ${INTERVAL_S:-10}
       JOURNEY_S: ${JOURNEY_S:-1800}

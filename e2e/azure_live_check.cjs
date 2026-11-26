@@ -1,22 +1,25 @@
 // Feature-by-feature check of the LIVE Azure deployment in Chromium (Part 1, Table 3: F1–F12). All roles.
-// Usage: GREENOPS_URL=https://<static web app> GREENOPS_API=https://<function app>/api GREENOPS_OPERATOR_KEY=<key> \
+// Usage: GREENOPS_URL=https://<static web app> GREENOPS_API=https://<function app>/api GREENOPS_OPERATOR_EMAIL=<operator> \
+//        SESSION_SIGNING_KEY=$(terraform -chdir=infra/terraform output -raw session_signing_key) \
 //        node e2e/azure_live_check.cjs [screenshot-dir]
-// Before running, use the demo faults: TRK-003 compressor, TRK-002 door, TRK-005 offline, TRK-004 delay (past its ETA).
-// The check acknowledges the TRK-003 temperature alert and switches TRK-001 to "door" and back, so use a demo deployment.
+// Before running, use the demo faults: TRK-001 humidity, TRK-003 compressor, TRK-002 door, TRK-005 offline, TRK-004 delay (past its ETA).
+// The check acknowledges the TRK-003 temperature alert and switches TRK-006 to "door" and back, so use a demo deployment.
 // F5 (certificates) and F6 (archive) are checked from outside the browser by e2e/azure_live_backend.py.
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '../dashboard/node_modules/playwright');
 const assert = require('node:assert/strict');
 const path = require('path'), fs = require('fs');
 
-const url = process.env.GREENOPS_URL, api = process.env.GREENOPS_API, key = process.env.GREENOPS_OPERATOR_KEY;
+const url = process.env.GREENOPS_URL, api = process.env.GREENOPS_API, email = process.env.GREENOPS_OPERATOR_EMAIL, key = process.env.SESSION_SIGNING_KEY;
+const { issue } = require('../swa-api/src/token');
+const sessionFor = who => issue({ email: who }, key);
 const out = process.argv[2] || path.join(__dirname, 'live-screenshots');
 const results = [];
 const pass = (feature, what) => { results.push([feature, what]); console.log(`✓ ${feature.padEnd(4)} ${what}`); };
-const getJson = async (p, opts = {}) => { const r = await fetch(api + p, opts); return { status: r.status, body: await r.json().catch(() => ({})) }; };
+const getJson = async (p, opts = {}) => { const r = await fetch(api + p, { ...opts, headers: { Authorization: `Bearer ${sessionFor(email).token}`, ...opts.headers } }); return { status: r.status, body: await r.json().catch(() => ({})) }; };
 const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items;
 
 (async () => {
-  assert(url && api && key, 'set GREENOPS_URL, GREENOPS_API and GREENOPS_OPERATOR_KEY');
+  assert(url && api && email && key, 'set GREENOPS_URL, GREENOPS_API, GREENOPS_OPERATOR_EMAIL and SESSION_SIGNING_KEY');
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_PATH || undefined });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } }), errors = [];
@@ -27,6 +30,18 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
   const nav = (label) => page.getByRole('navigation', { name: 'Dashboard views' }).getByRole('link', { name: new RegExp('^' + label.replace(/[&()]/g, '\\$&')) }).click();
   try {
     // ---- F7 simulated fleet + F1 live map
+    // ---- F12 sign-in: the real site shows only the sign-in page and gives no token; the API refuses everyone without one
+    await page.goto(url);
+    await page.getByRole('link', { name: 'Sign in with Microsoft' }).waitFor({ timeout: 60000 });
+    await page.screenshot({ path: path.join(out, 'sign_in.png') });
+    for (const p of ['/trucks', '/alerts', '/health', '/routes', '/sim/trucks', '/session']) assert.equal((await fetch(api + p)).status, 401, p);
+    assert([401, 302].includes((await fetch(url + '/api/token', { redirect: 'manual' })).status), 'token without a Microsoft sign-in');
+    assert.match((await fetch(url + '/.auth/login/aad', { redirect: 'manual' })).headers.get('location') || '', /login\.(microsoftonline|live)\.com|identity/);
+    pass('F12', 'without a Microsoft sign-in: sign-in page only, no token, every API view answers 401');
+    // From here the two sign-in answers are supplied by this script (a person cannot type a Microsoft password in a test).
+    let current = 'viewer@example.com';
+    await page.route('**/.auth/me', r => r.fulfill({ json: { clientPrincipal: { identityProvider: 'aad', userDetails: current, userRoles: ['authenticated'] } } }));
+    await page.route(new URL('/api/token', url).href, r => r.fulfill({ json: sessionFor(current) }));
     await page.goto(url);
     await page.locator('.connection').filter({ hasText: 'Fleet API connected' }).waitFor({ timeout: 60000 });
     await page.locator('.truck-row').first().waitFor();
@@ -75,21 +90,27 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
     }
     assert(temp.email_seconds < 30, 'NFR-01: email within 30 s');
     pass('F2', `temperature breach alert; email confirmed sent by the Logic App in ${temp.email_seconds} s (NFR-01: < 30 s)`);
+    const damp = find('TRK-001', 'HUMIDITY');
+    assert(damp && damp.email_status === 'sent', 'no emailed TRK-001 HUMIDITY alert');
+    pass('F2', `humidity breach alert; email sent in ${damp.email_seconds} s`);
+    for (const a of [temp, damp]) assert.equal(a.sms_status, 'requested', `${a.truck_id} text message`);
+    assert([door, off, late].every((a) => !a.sms_status), 'only cargo emergencies are texted');
+    pass('F13', 'text messages requested from Azure Monitor for the two cargo emergencies, and for nothing else');
     pass('F3', `door-open alert after the 120 s limit; email sent in ${door.email_seconds} s`);
     pass('F8', `offline alert (TRK-005, email ${off.email_seconds} s) and delayed alert (TRK-004, email ${late.email_seconds} s)`);
 
-    // ---- F12 (partial): write actions need an operator key
+    // ---- F12 roles: a viewer cannot act, a named operator can
     await nav('Incidents');
     const ackName = 'Acknowledge TRK-003 TEMPERATURE';
     await page.getByRole('button', { name: ackName }).waitFor({ timeout: 30000 });
     assert.equal(await page.getByRole('button', { name: ackName }).isDisabled(), true, 'read-only viewers cannot acknowledge');
-    const anon = await getJson('/sim/trucks/TRK-001/fault', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"scenario":"door"}' });
-    assert.equal(anon.status, 401);
-    await page.getByText('Read-only · Connect operator').click();
-    await page.getByLabel('Operator access key').fill(key);
-    await page.getByRole('button', { name: 'Connect', exact: true }).click();
-    const who = (await page.getByText(/^Operator: /).first().innerText()).trim();
-    pass('F12', `read-only without a key (button disabled, API 401); operator connected as "${who.replace(/^Operator: /, '')}"`);
+    const viewer = await getJson('/sim/trucks/TRK-006/fault', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${sessionFor('viewer@example.com').token}` }, body: '{"scenario":"door"}' });
+    assert.equal(viewer.status, 403);
+    current = email;
+    await page.goto(url + '/?view=alerts');
+    await page.getByText('Operator', { exact: true }).waitFor({ timeout: 30000 });
+    const who = (await getJson('/session')).body.user;
+    pass('F12', `a viewer cannot act (button disabled, API 403); operator signed in as "${who}"`);
     await page.screenshot({ path: path.join(out, 'alerts_before.png'), fullPage: true });
 
     // ---- F9 alert history + acknowledge
@@ -103,17 +124,19 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
 
     // ---- F7 faults on demand from the dashboard, F11 health and cost panel
     await nav('System');
-    const fault = page.getByLabel('Fault scenario for TRK-001');
+    const fault = page.getByLabel('Fault scenario for TRK-006');
     await fault.waitFor();
     await fault.selectOption('door');
     await page.getByRole('status').filter({ hasText: 'scenario applied' }).waitFor();
-    assert.equal((await getJson('/sim/trucks')).body['TRK-001'], 'door');
+    assert.equal((await getJson('/sim/trucks')).body['TRK-006'], 'door');
     const sysText = await page.locator('main').innerText();
     assert(/USD|\$/.test(sysText) && /message/i.test(sysText), 'health and cost panel should show messages and cost');
     await page.screenshot({ path: path.join(out, 'system.png'), fullPage: true });
     await fault.selectOption('none');
-    await page.waitForFunction(async (a) => (await (await fetch(a + '/sim/trucks')).json())['TRK-001'] === 'none', api, { timeout: 20000 });
-    pass('F7', 'fault panel switched TRK-001 to "door" and back to "none" through the Fleet API (FR-02)');
+    let cleared = false;
+    for (let i = 0; i < 10 && !cleared; i++) { cleared = (await getJson('/sim/trucks')).body['TRK-006'] === 'none'; if (!cleared) await page.waitForTimeout(1500); }
+    assert(cleared, 'fault was not cleared');
+    pass('F7', 'fault panel switched TRK-006 to "door" and back to "none" through the Fleet API (FR-02)');
     pass('F11', 'system health and cost panel shows message counts and the cost assumption');
 
     // ---- responsive views, no browser errors
