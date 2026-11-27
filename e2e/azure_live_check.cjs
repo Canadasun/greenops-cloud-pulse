@@ -1,5 +1,5 @@
 // Feature-by-feature check of the LIVE Azure deployment in Chromium (Part 1, Table 3: F1–F12). All roles.
-// Usage: GREENOPS_URL=https://<static web app> GREENOPS_API=https://<function app>/api GREENOPS_OPERATOR_EMAIL=<operator> \
+// Usage (add GREENOPS_SMS=off while no sms_phones are set): GREENOPS_URL=https://<static web app> GREENOPS_API=https://<function app>/api GREENOPS_OPERATOR_EMAIL=<operator> \
 //        SESSION_SIGNING_KEY=$(terraform -chdir=infra/terraform output -raw session_signing_key) \
 //        node e2e/azure_live_check.cjs [screenshot-dir]
 // Before running, use the demo faults: TRK-001 humidity, TRK-003 compressor, TRK-002 door, TRK-005 offline, TRK-004 delay (past its ETA).
@@ -93,9 +93,14 @@ const openAlerts = async () => (await getJson('/alerts?status=OPEN')).body.items
     const damp = find('TRK-001', 'HUMIDITY');
     assert(damp && damp.email_status === 'sent', 'no emailed TRK-001 HUMIDITY alert');
     pass('F2', `humidity breach alert; email sent in ${damp.email_seconds} s`);
-    for (const a of [temp, damp]) assert.equal(a.sms_status, 'requested', `${a.truck_id} text message`);
-    assert([door, off, late].every((a) => !a.sms_status), 'only cargo emergencies are texted');
-    pass('F13', 'text messages requested from Azure Monitor for the two cargo emergencies, and for nothing else');
+    if (process.env.GREENOPS_SMS === 'off') {  // no sms_phones in Terraform yet: the channel must stay silent
+      assert([temp, damp, door, off, late].every((a) => !a.sms_status || a.sms_status === 'off'), 'SMS is off, so nothing may be texted');
+      pass('F13', 'SMS channel not configured on this deployment (no phone numbers); no text messages were requested');
+    } else {
+      for (const a of [temp, damp]) assert.equal(a.sms_status, 'requested', `${a.truck_id} text message`);
+      assert([door, off, late].every((a) => !a.sms_status), 'only cargo emergencies are texted');
+      pass('F13', 'text messages requested from Azure Monitor for the two cargo emergencies, and for nothing else');
+    }
     pass('F3', `door-open alert after the 120 s limit; email sent in ${door.email_seconds} s`);
     pass('F8', `offline alert (TRK-005, email ${off.email_seconds} s) and delayed alert (TRK-004, email ${late.email_seconds} s)`);
 
