@@ -93,6 +93,9 @@ jobs:
       - name: Shell scripts parse
         working-directory: .
         run: for f in scripts/*.sh; do bash -n "$f"; done
+      - name: Script unit tests
+        working-directory: .
+        run: python3 -m pip install --quiet pytest && python3 -m pytest -q scripts/tests
 
   end-to-end:           # all roles – the whole system in Docker
     needs: [simulator, ingestion, functions, dashboard, infrastructure]
