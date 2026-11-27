@@ -87,9 +87,12 @@ that any team member with Contributor on the resource group starts with **Run no
 90 minutes (`truck_run_minutes`), which keeps two runs a day inside the IoT Hub F1 free quota of 8,000 messages.
 
 ```bash
+# 0. Once per subscription: the remote, versioned, locked home of the Terraform state (Role 2)
+bash scripts/bootstrap_tfstate.sh
 # 1. Infrastructure (Terraform, azurerm) – settings go in infra/terraform/azure.auto.tfvars (not committed),
-#    including operator_tokens = { "<random key, 32+ chars>" = "<operator name>" } and a random
-#    delivery_callback_token (32+ chars); with no operator_tokens the dashboard is read-only.
+#    including operator_emails = { "<Microsoft account email>" = "<operator name>" } and a random
+#    delivery_callback_token (32+ chars); everyone else who signs in can only view.
+#    State lives in Azure (storage account stgreenopsg3tfstate); you need Storage Blob Data Contributor on it.
 cd infra/terraform && terraform init && terraform plan -out=tfplan   # review the plan, then:
 terraform apply tfplan && cd ../..
 # 2. Register each truck's certificate in IoT Hub (Role 2)

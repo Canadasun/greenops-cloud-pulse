@@ -90,6 +90,9 @@ jobs:
       - run: terraform fmt -check -recursive
       - run: terraform init -backend=false -input=false
       - run: terraform validate
+      - name: Shell scripts parse
+        working-directory: .
+        run: for f in scripts/*.sh; do bash -n "$f"; done
 
   end-to-end:           # all roles – the whole system in Docker
     needs: [simulator, ingestion, functions, dashboard, infrastructure]
