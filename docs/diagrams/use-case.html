@@ -1,0 +1,41 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="style.css"></head><body>
+<div id="d"><svg id="svg" xmlns="http://www.w3.org/2000/svg" width="1120" height="1300"></svg></div>
+<script src="uc_common.js"></script><script>
+// UML use case diagram – what the people who use GreenOps can do (Part 2, Figure 1a, updated for Part 4).
+// Part 4 (F12): every user signs in with a Microsoft account; any account may view, only the five team accounts may act.
+const STAR = '#c0392b';
+boundary(470, 20, 630, 1010, 'GreenOps Cloud Pulse – dashboard');
+const V = person(120, 300, '', '');
+txt(120, 206, 'Viewer', 'b'); txt(120, 227, '★ any Microsoft account', 's', 'middle', { fill: STAR });
+const O = person(250, 680, '', '');
+txt(200, 650, 'Operator', 'b', 'end'); txt(200, 672, '★ one of the', 's', 'end'); txt(200, 692, '★ 5 team accounts', 's', 'end');
+const D = person(400, 800, 'Dispatcher', 'responds to alerts');
+const Q = person(270, 960, 'QA Officer', 'audits cargo');
+const F = person(110, 960, 'Fleet Manager', 'reviews cost');
+const U = {
+  login: uc(785, 115, '★ Sign in with Microsoft', 'F12', 'Must'),
+  map: uc(785, 215, 'View live fleet map', 'F1 · FR-10', 'Must'),
+  detail: uc(785, 315, 'View truck details + 1-hour chart', 'F4 · FR-10', 'Must', 210),
+  cost: uc(785, 415, 'View system health and cost', 'F11', 'Could'),
+  hist: uc(785, 520, 'View alert history', 'F9 · FR-11', 'Should'),
+  ack: uc(785, 640, 'Acknowledge an alert', 'F9 · FR-11', 'Should'),
+  fault: uc(785, 745, 'Set a demo fault', 'F7 · FR-02', 'Should'),
+  recv: uc(785, 850, 'Receive alert email or ★ SMS', 'F2, F13 · FR-06', 'Must'),
+  audit: uc(785, 955, 'Review audit archive', 'F6 · FR-09', 'Must'),
+};
+for (const k of ['login', 'map', 'detail', 'hist', 'cost']) assoc(V, U[k]);
+assoc(O, U.ack); assoc(O, U.fault); assoc(D, U.recv); assoc(Q, U.audit);
+// generalisation: an Operator is a Viewer who may also act; the staff roles are Operators
+el('line', { x1: O.x, y1: O.top - 4, x2: V.x + 10, y2: V.bottom + 8, stroke: INK, 'stroke-width': 1.8, 'marker-end': 'url(#tri)' });
+for (const a of [D, Q, F]) el('line', { x1: a.x, y1: a.top - 4, x2: O.x + 6, y2: O.bottom + 8, stroke: INK, 'stroke-width': 1.8, 'marker-end': 'url(#tri)' });
+dep(U.ack, U.hist, '«extend»', 0, 0);
+legend(20, 1080, 1080, [
+  'Stick figure = actor; oval = use case, with feature / requirement IDs and priority. Solid line = the actor uses it.',
+  'Hollow triangle = “is a kind of”: an Operator can do everything a Viewer can, plus acknowledge alerts and set faults.',
+  '★ red = changed in Part 4: Microsoft sign-in is built (was “Could”) and tells viewers and operators apart by account.',
+  '★ Cargo emergencies can also be texted (SMS). Dashed «extend» = acknowledging is done from the alert history.',
+]);
+// colour the ★ parts of use case titles
+for (const t of document.querySelectorAll('text')) if (t.textContent.includes('★')) t.style.fill = STAR;
+window.READY = true;
+</script></body></html>

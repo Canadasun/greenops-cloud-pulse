@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="style.css"></head><body>
+<div id="d" class="m"></div>
+<!-- UML sequence diagram: a cargo emergency is emailed (F2) and texted (F13, added in Part 4) — Role 3 · Shi. -->
+<pre id="src" style="display:none">
+sequenceDiagram
+autonumber
+participant AF as Alert Function
+participant DB as Cosmos DB
+participant LA as Email Logic App
+participant API as Functions app callbacks
+participant SMS as SMS Logic App + Azure Monitor
+AF->>DB: one transaction per truck: readings + TEMPERATURE / HUMIDITY alert
+AF->>DB: claim the email (attempt + 1)
+AF->>LA: POST alert (Idempotency-Key = alert id)
+LA->>API: POST /alerts/{id}/dispatch (one workflow per alert)
+LA->>LA: send email (Azure Communication Services)
+LA->>API: POST /alerts/{id}/delivery email_status = sent (~2 s)
+opt SMS_URL is set (phone numbers only in Azure)
+  AF->>SMS: POST 160-character plain text
+  SMS->>SMS: run started → metric alert → action group texts on-call phones
+  AF->>DB: sms_status = requested
+end
+Note over AF,API: on failure: back-off 30 s → 1 h, stop after 8 attempts
+</pre>
+<script src="node_modules/mermaid/dist/mermaid.min.js"></script>
+<script>window.LEGEND = ['Each column is one part of the system; time runs downwards. Solid arrow = request; dashed arrow = reply. Numbers give the order.',
+  'opt = only when the condition holds: SMS is sent only when phone numbers are set in Azure. The claim steps stop one alert being sent twice.'];</script>
+<script src="mermaid_page.js"></script>
+</body></html>

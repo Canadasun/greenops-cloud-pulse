@@ -11,5 +11,5 @@ Local stand-in for **Azure IoT Hub** (Part 2, Figure 7, steps ① – ③).
 * Certificates are created by `scripts/make_certs.sh` into `certs/` and are never committed.
 
 Tests: `tests/test_broker_security.py` (5 tests against the running broker: registered truck accepted, unknown CA refused,
-no certificate refused, cannot publish as another truck, cannot read other trucks) and `router/tests` (8 unit tests).
+no certificate refused, cannot publish as another truck, cannot read other trucks) and `router/tests` (11 unit tests).
 Revocation was verified manually and is also part of the end-to-end tests.

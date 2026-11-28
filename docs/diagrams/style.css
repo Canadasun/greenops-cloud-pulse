@@ -1,0 +1,7 @@
+body{margin:0;background:#fff;font-family:Calibri,Carlito,Arial,sans-serif}
+#d{display:inline-block;background:#fff}
+text{fill:#1a1a19}
+.t{font-size:19px}.s{font-size:15.5px;fill:#4a4a45}.b{font-size:20px;font-weight:700}
+#d.m{padding:10px 18px 14px}
+.legend{max-width:900px;font-size:15.5px;color:#4a4a45;border:1px solid #A6A6A6;border-radius:10px;padding:12px 16px;margin-top:10px;line-height:1.55}
+.legend b{display:block;font-size:19px;color:#1a1a19;margin-bottom:4px}

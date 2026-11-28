@@ -1,0 +1,168 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="style.css"></head><body>
+<div id="d" class="m"></div>
+<!-- UML class diagram of the Part 4 code, one package per role (same notation as Part 2, Figure 4 and Part 3, Figure 13).
+     ★ marks a class, attribute or operation added or changed in Part 4. Names match the code on the part4-launch branch. -->
+<pre id="src" style="display:none">
+classDiagram
+direction LR
+namespace Simulator_Role1_Ying {
+  class TruckSimulator {
+    +truck_id: str
+    +scenario: str
+    +temp_c: float
+    +humidity_pct: float
+    +inject_fault(scenario) ★ humidity
+    +should_publish() bool
+    +next_reading() TelemetryMessage
+  }
+  class CargoProfile {
+    +cargo_type: str
+    +temp_min_c, temp_max_c: float
+    +humidity_max_pct: float
+    +is_breach(temp_c, humidity_pct) bool
+  }
+  class Route {
+    +route_id: str
+    +position_at(progress)
+  }
+  class MqttPublisher {
+    +connect()
+    +publish(topic, payload)
+  }
+}
+namespace Shared_contracts {
+  class TelemetryMessage {
+    +truck_id, timestamp
+    +temp_c, humidity_pct, door_open
+    +lat, lon, scheduled_eta
+    +parked: bool
+  }
+  class Alert {
+    +id, truck_id, type, details
+    +status: AlertStatus
+    +email_status, email_attempts
+    +email_workflow_id
+    +★ sms_status, sms_attempts
+    +★ sms_requested_at
+  }
+  class AlertType {
+    &lt;&lt;enumeration&gt;&gt;
+    TEMPERATURE
+    HUMIDITY
+    DOOR_OPEN
+    OFFLINE
+    DELAYED
+  }
+}
+namespace Alerting_Role3_Shi {
+  class alerting {
+    &lt;&lt;module · IoT Hub trigger&gt;&gt;
+    +evaluate(msg, door_open_s)
+    +process_batch(messages, repo, alerts)
+    +★ apply_readings(tx, msgs) one transaction per truck
+  }
+  class FleetWatcher {
+    &lt;&lt;function · timer, every minute&gt;&gt;
+    +★ check_fleet(repo) one snapshot, dry run first
+    +check_truck(tx, alerts, now)
+  }
+  class AlertService {
+    +raise_in(tx, type, details)
+    +resolve_in(tx, type)
+    +deliver(alert_id)
+    +★ deliver_sms(alert_id)
+    +retry_notifications(now)
+    +delivery_result(alert_id, status)
+  }
+  class LogicAppNotifier {
+    +send(alert) email
+  }
+  class SmsNotifier {
+    &lt;&lt;★ new&gt;&gt;
+    +from_env() off when SMS_URL is empty
+    +send(alert) 160 plain characters
+  }
+}
+namespace Storage_Role4_Durmusali {
+  class FleetRepository {
+    &lt;&lt;interface&gt;&gt;
+    +mutate_truck(truck_id, callback)
+    +★ save_readings(msgs) batched
+    +★ fleet_snapshot() FleetSnapshot
+    +list_alerts(limit, status)
+    +get_faults() / set_fault()
+  }
+  class CosmosFleetRepository
+  class InMemoryFleetRepository
+  class TruckTransaction {
+    +find_open(type)
+    +save_alert(alert)
+  }
+  class FleetSnapshot {
+    &lt;&lt;★ new&gt;&gt;
+    +states: truck_id → state
+    +open_alerts: Alert[]
+  }
+}
+namespace Dashboard_Role5_Idowu {
+  class FleetAPI {
+    &lt;&lt;function · HTTP&gt;&gt;
+    +GET /trucks, /alerts, /health
+    +POST /alerts/id/ack
+    +POST /sim/trucks/id/fault
+    +★ GET /session
+  }
+  class auth {
+    &lt;&lt;★ module&gt;&gt;
+    +★ viewer(req) any signed-in account
+    +★ operator(req) OPERATOR_EMAILS only
+  }
+  class session {
+    &lt;&lt;★ module&gt;&gt;
+    +★ issue(email, key) 15-min token
+    +★ verify(token, key) claims or None
+  }
+  class swa_api_token {
+    &lt;&lt;★ /api/token · Static Web Apps&gt;&gt;
+    +★ readPrincipal(req) Microsoft account
+    +★ tokenResponse() signed session
+  }
+  class DashboardApp {
+    &lt;&lt;React · Static Web Apps&gt;&gt;
+    +★ SignIn page, session.js
+    +FleetMap, TruckDetail, AlertHistory
+    +FaultPanel, HealthPanel
+  }
+}
+TruckSimulator --> CargoProfile
+TruckSimulator --> Route
+TruckSimulator ..> TelemetryMessage : creates
+MqttPublisher ..> TelemetryMessage : sends
+alerting ..> TelemetryMessage : validates
+alerting --> AlertService
+FleetWatcher --> AlertService
+AlertService --> LogicAppNotifier
+AlertService --> SmsNotifier
+AlertService ..> Alert : raises
+Alert --> AlertType
+alerting --> FleetRepository
+FleetWatcher --> FleetRepository
+FleetRepository <|.. CosmosFleetRepository
+FleetRepository <|.. InMemoryFleetRepository
+FleetRepository ..> TruckTransaction : one per truck
+FleetRepository ..> FleetSnapshot : returns
+FleetAPI --> FleetRepository
+FleetAPI --> auth
+auth --> session
+swa_api_token ..> session : same token format
+DashboardApp ..> swa_api_token : sign-in
+DashboardApp ..> FleetAPI : Bearer session
+</pre>
+<script src="node_modules/mermaid/dist/mermaid.min.js"></script>
+<script>window.LEGEND = [
+  'Box = class or module; top part = name (with its kind, e.g. «interface»), then attributes, then operations (+ = public).',
+  'Packages = the five roles plus the shared message contracts. Solid arrow = uses; dashed arrow = creates, sends or returns; hollow triangle = implements.',
+  '★ = added or changed in Part 4: Microsoft sign-in (auth, session, /api/token), SMS (SmsNotifier, sms_* fields), the humidity fault, and the 100-truck optimisations (fleet_snapshot, batched writes, one transaction per truck).',
+];</script>
+<script src="mermaid_page.js"></script>
+</body></html>

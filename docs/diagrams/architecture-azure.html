@@ -1,0 +1,60 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="style2.css"></head><body>
+<div id="d"><svg id="svg" xmlns="http://www.w3.org/2000/svg" width="1400" height="1150"></svg></div>
+<script src="arch_common.js"></script><script>
+// Architecture as deployed on Azure, Part 4 (November 2026). All roles; Role 2 · Marcelbriaud leads.
+// Same layout and numbering as Part 2, Figure 7 and Part 3, Figure 11; ★ marks what Part 4 changed.
+el('rect', { x: 230, y: 40, width: 950, height: 710, rx: 16, fill: '#f6f8fc', stroke: '#1F3864', 'stroke-width': 2.6 });
+el('text', { x: 250, y: 66, 'font-size': 18, 'font-weight': 700, fill: '#1F3864' }, 'Microsoft Azure · rg-greenops-demo-g3-cc · Canada Central (Cosmos DB: East US 2) · all created by Terraform');
+heads();
+// services inside Azure
+const SIM = card(110, 300, 180, 170, 'Truck Simulator', ['Container Apps job', '6 trucks, 90-min run', '1 message / 10 s', 'polls faults from API', '★ humidity fault'], 1);
+const HUB = card(335, 300, 175, 170, 'Azure IoT Hub', ['F1 free tier', 'MQTT over TLS 1.2', 'X.509 certificate', 'per truck', 'two message routes'], 2);
+const AF = card(560, 195, 230, 100, 'Alert Function', ['IoT Hub trigger · validates', '★ one transaction per truck'], 3);
+const LA = card(560, 345, 230, 110, 'Logic Apps', ['email: claim → send → report', '(Azure Communication Services)', '★ SMS: Azure Monitor action group'], 3);
+const FW = card(560, 520, 230, 90, 'Fleet Watcher Function', ['timer: every minute', '★ one fleet snapshot query'], 3);
+const CDB = card(820, 230, 225, 150, 'Azure Cosmos DB', ['serverless · East US 2', 'managed identity, no keys', 'telemetry (7-day TTL)', 'alerts · state · faults'], 4);
+const BLOB = card(820, 520, 225, 110, 'Azure Blob Storage', ['raw archive for audits', 'batches every 5 minutes', 'archive tier after 30 days'], 4);
+const API = card(1065, 235, 190, 120, 'Fleet API Function', ['HTTP + CORS', '★ signed session check', '★ viewers read, team', '★ operators act'], 5);
+const SWA = card(1065, 460, 190, 150, 'Static Web Apps', ['Free plan · React', 'Leaflet map, polls 5 s', '★ Microsoft sign-in', '★ /api/token issues', '★ 15-min session'], 5);
+const OPS = card(602, 700, 715, 50, 'Operations: Application Insights · Log Analytics · budget alerts CAD 2 / CAD 10', [], 'ops');
+// outside Azure
+const MAIL = card(1295, 300, 180, 90, 'Staff inbox', ['Outlook mailbox'], 'x', true);
+const PHONE = card(1295, 400, 180, 80, '★ On-call phones', ['SMS (when numbers set)'], 'x', true);
+const USERS = card(1295, 520, 180, 100, 'Users', ['★ any Microsoft account', '★ views; 5 team', '★ accounts act'], 'x', true);
+const ENTRA = card(1295, 640, 180, 80, '★ Microsoft Entra ID', ['account sign-in'], 'x', true);
+const OSM = card(1295, 750, 180, 70, 'OpenStreetMap', ['map tiles'], 'x', true);
+const GH = card(470, 840, 420, 90, 'GitHub + GitHub Actions', ['pull requests, 6 CI jobs on every push'], 'x', true);
+const TF = card(950, 840, 420, 90, 'Terraform (azurerm provider)', ['creates every Azure resource', '★ state in Azure Storage: locked, versioned'], 'x', true);
+// numbered flow
+arrow([[SIM.r, 300], [HUB.l, 300]], '1', [222, 284]);
+arrow([[HUB.cx, HUB.t], [HUB.cx, 195], [AF.l, 195]], '2', [392, 195]);
+arrow([[HUB.cx, HUB.b], [HUB.cx, 650], [820, 650], [820, BLOB.b]], '3', [600, 650]);
+arrow([[AF.r, 205], [CDB.l, 205]], '4', [690, 190]);
+arrow([[AF.cx, AF.b], [AF.cx, LA.t]], '5', [583, 268]);
+arrow([[LA.r, 320], [MAIL.l, 320]], null, null, ['email', 1132, 314]);
+arrow([[LA.r, 370], [PHONE.l, 370]], '★12', [700, 370], ['SMS', 1132, 364]);
+arrow([[FW.cx, FW.t], [FW.cx, LA.b]], '6', [583, 438]);
+arrow([[API.l, 240], [CDB.r, 240]], '7', [950, 222]);
+arrow([[SWA.cx, SWA.t], [SWA.cx, API.b]], '8', [1042, 340]);
+arrow([[USERS.l, 480], [SWA.r, 480]], null, null);
+arrow([[ENTRA.l, 640], [1120, 640], [1120, SWA.b]], '★11', [1150, 640], null);
+arrow([[OSM.l, 750], [1030, 750], [1030, SWA.b]], null, null, ['tiles', 1062, 732]);
+arrow([[API.cx, API.t], [API.cx, 135], [SIM.cx, 135], [SIM.cx, SIM.t]], '10', [700, 135], null, true);
+arrow([[GH.cx, GH.t], [GH.cx, 752]], '9', [493, 775]);
+arrow([[TF.cx, TF.t], [TF.cx, 752]], null, null);
+legend('Follow the numbers (colour = owner role; dashed boxes are outside Azure; ★ red = changed in Part 4)', [
+  '1  Each truck publishes a 0.3 KB JSON message every 10 s with its own certificate.',
+  '2  IoT Hub accepts only registered trucks and routes every message to the Alert Function …',
+  '3  … and to Blob Storage, which keeps the raw archive for audits.',
+  '4  The Alert Function checks the limits and saves the readings and any alert in Cosmos DB.',
+  '5  A new alert starts the email Logic App; the email was sent in about 2 s (measured live).',
+  '6  Every minute the Fleet Watcher raises offline and delayed alerts from one fleet snapshot.',
+  '7  The Fleet API reads the latest data and alert history from Cosmos DB.',
+  '8  The dashboard polls the API every 5 s and sends its session token with each call.',
+  '9  GitHub Actions tests every push; Terraform builds the whole environment.',
+  '10  Faults chosen on the dashboard are stored by the Fleet API; the trucks read them.',
+  '★11  Users sign in with a Microsoft account; /api/token turns it into a 15-minute session.',
+  '★12  Temperature and humidity emergencies are also texted to the on-call phones.',
+], 905);
+window.READY = true;
+</script></body></html>

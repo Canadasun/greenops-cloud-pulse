@@ -1,0 +1,7 @@
+{
+  "name": "greenops-diagrams",
+  "private": true,
+  "description": "Sources of the architecture, UML and sequence diagrams; `npm run render` writes docs/*.png",
+  "scripts": { "render": "node render.js" },
+  "devDependencies": { "mermaid": "11.4.1", "playwright": "1.61.0" }
+}
