@@ -18,7 +18,7 @@ export default function OverviewPage({ trucks, open, change, inspect, acknowledg
     <QueryState query={trucks} label="Fleet" />
     <div className="overview-grid">
       <section className="card" aria-label="Priority incidents"><div className="section-heading"><div><p className="eyebrow">Act next</p><h2>Needs attention <span className="count">{active?.length ?? '—'}</span></h2></div><button onClick={() => change({ view: 'alerts', tab: 'active' })}>View all {open.data?.items.length ?? ''} incidents</button></div><QueryState query={open} label="Open incidents" />
-        {!identity && <p className="small muted">Connect an operator key to acknowledge. Inspection is available to everyone.</p>}
+        {!identity && <p className="small muted">Your account can view only. Operators can acknowledge; anyone can inspect a truck.</p>}
         <AlertHistory compact alerts={active?.slice(0, 3)} onAcknowledge={acknowledge} canOperate={!!identity} onSelect={inspect} />
         <p className="small muted">Cargo breaches first, then offline, door and delay issues; oldest first within each group.</p>
       </section>

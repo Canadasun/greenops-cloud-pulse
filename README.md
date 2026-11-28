@@ -169,10 +169,10 @@ python scripts/check_email_duplicates.py --since 2026-10-12                    #
 | Sign-in token API | `cd swa-api && node --test` | 10 |
 | Load-test tools | `python -m pytest load` | 3 |
 | Scripts (duplicate-email check) | `python -m pytest scripts/tests` | 4 |
-| Dashboard | `cd dashboard && npm run typecheck && npm test` | 36 + API types |
+| Dashboard | `cd dashboard && npm run typecheck && npm test` | 39 + API types |
 | Browser + accessibility regressions (Chromium) | `cd dashboard && npm run build && npm run test:browser` | 46 axe scans; sign-in, viewer vs operator, responsive views, keyboard/focus, outages |
 | **End to end** (whole system) | `docker compose -f docker-compose.yml -f e2e/compose.e2e.yml up -d --build && python -m pytest e2e` | 11 |
-| **Total in CI** | | **268** + 46 axe scans |
+| **Total in CI** | | **271** + 46 axe scans |
 | Live Azure check (manual, after a deploy) | `node e2e/azure_live_check.cjs` + `e2e/azure_live_backend.py` | 17 + 2 (passed 2026-11-27) |
 
 GitHub Actions (`.github/workflows/ci.yml`) runs every suite on each pull request and on each push to `main`, plus `terraform fmt`/`validate` and a parse check of every script. The Cosmos DB emulator image is pinned by digest in `docker-compose.yml` so a new preview release cannot break the storage tests.
